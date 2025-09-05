@@ -6,4 +6,10 @@ export const getAllUsers = async (req: Request, res: Response) =>{
     res.json(rows);
 }
 
+export const getUserByEmail = async (req: Request, res: Response) =>{
+    const [rows]:any = await dbcon.query("SELECT * FROM users WHERE email = ?", [req.params.email]);
+    if (!rows.length) return res.status(404).json({ message: "User not found" });
+    res.json(rows[0]);
+}
+
 
