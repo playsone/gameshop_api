@@ -1,6 +1,6 @@
 import  express  from "express";
 import { getAllUsers, getUserByEmail, login, register, reset } from "../controllers/user_api";
-import { getAllLottos, getSoldLottoNumber, getUnSoldLottoNumber, searchLottoNumber } from "../controllers/lotto_api";
+import { getAllLottos, getSoldLottoNumber, getUnSoldLottoNumber, ranTier1Sold, searchLottoNumber } from "../controllers/lotto_api";
 
 const router = express.Router();
 // index
@@ -21,5 +21,6 @@ router.get("/lottos/sold", getSoldLottoNumber);
 router.get("/lottos/unsold", getUnSoldLottoNumber);
 router.get("/lottos/search", getAllLottos);
 router.get("/lottos/search/:num", searchLottoNumber);
+router.get("/lottos/t1Sold", ranTier1Sold);
 
 export default router;

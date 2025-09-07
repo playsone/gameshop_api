@@ -57,3 +57,28 @@ export const searchLottoNumber = async (req: Request, res: Response) => {
     }
 }
 
+export const ranTier1Sold = async (req: Request, res: Response) => {
+    try{
+        // lotto is sold
+        const [rows]:any = await dbcon.query("SELECT lotto_number from Lottos WHERE is_sold = 1");
+        //ran new num
+        const t1num = rows[Math.floor(Math.random() * rows.length)];
+        
+        const [t1]:any = await dbcon.query("SELECT lotto_number FROM Lottos WHERE pid = 1 and is_sold = 1");
+        if(t1[0]){
+            await dbcon.query("UPDATE Lottos set pid = 0 where pid = 1");
+            await dbcon.query("UPDATE Lottos set pid = 1 where lotto_number = ?", t1num["lotto_number"]);
+        }else{
+            await dbcon.query("UPDATE Lottos set pid = 1 where lotto_number = ?", t1num["lotto_number"]);
+        }
+
+        res 
+        .status(201)
+        .json({
+            message: "Random success"
+        })
+    }catch(err){
+        res.json({message: err})
+    }
+}
+
