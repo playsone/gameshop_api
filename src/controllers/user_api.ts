@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { dbcon } from "../database/pool";
 import bcrypt from 'bcrypt';
+import { Users } from "../models/usersModel";
 
 export const getAllUsers = async (req: Request, res: Response) =>{
     const [rows] = await dbcon.query("SELECT * FROM Users");
@@ -9,11 +10,12 @@ export const getAllUsers = async (req: Request, res: Response) =>{
 
 export const getUserByEmail = async (req: Request, res: Response) =>{
     try{
-        const [rows]:any = await dbcon.query("SELECT * FROM Users WHERE email = ?", [req.params.email]);
-         if (!rows.length) return res.status(404).json({ message: "User not found" });
+        const [rows] = await dbcon.query("SELECT * FROM Users WHERE email = ?", [req.params.email]);
+        const usersData = rows as Users[];
+         if (usersData.length) return res.status(404).json({ message: "User not found" });
         res
         .status(200)
-        .json(rows[0]);
+        .json(usersData[0]);
     }catch(err){
         res.status(204).json({message : "User not found"}) 
     }
@@ -43,7 +45,7 @@ export const login = async (req: Request, res: Response) => {
     const {email, password} = req.body
     try{
         const [results]:any = await dbcon.query("SELECT * FROM Users WHERE email = ?", email);
-        const userData = results[0];
+        const userData = results[0] as Users;
         const isMatch = await bcrypt.compare(password, userData.password);
         if(!isMatch){
             res
@@ -51,7 +53,7 @@ export const login = async (req: Request, res: Response) => {
             .json({message: "email or password worng!!!"})
             return false;
         }
-        return res.status(200).json({message: "Login Success", role: results[0].role});
+        return res.status(200).json({message: "Login Success", role: userData.role, is_login: true, id: userData.uid});
     }catch(error){
         res
         .status(401)
@@ -62,8 +64,9 @@ export const login = async (req: Request, res: Response) => {
 
 export const reset = async (req: Request, res: Response) => {
   try{
-    dbcon.query("DELETE FROM Users WHERE role != 1");
-    dbcon.query("DELETE FROM Lottos");
+    await dbcon.query("DELETE FROM Users WHERE role != 1");
+    await dbcon.query("DELETE FROM Lottos");
+    await dbcon.query("UPDATE Prizes SET lotto_number = null");
     res.status(200).json({message: "reset success"})
   }catch(err){
     res.status(500).json({message: "error", err})
