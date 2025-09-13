@@ -1,18 +1,18 @@
 import express from "express";
 import {
-  getAllUsers,
-  getUserByEmail,
-  login,
-  register,
-  reset,
+  getAllUsers_api,
+  getUserByEmail_api,
+  login_api,
+  register_api,
+  reset_api,
 } from "../controllers/user_api";
 import {
-  getAllLottos,
-  getSoldLottoNumber,
-  getUnSoldLottoNumber,
-  searchLottoNumber,
+  getAllLottos_api,
+  getSoldLottoNumber_api,
+  getUnSoldLottoNumber_api,
+  searchLottoNumber_api,
 } from "../controllers/lotto_api";
-import { getLottosOfPrizesByPrizeTier, getPrizes, randPrize, test } from "../controllers/prize_api";
+import { checkTierPrizeLottos_api, getLottosOfPrizesByPrizeTier_api, getPrizes_api, randPrize_api, test_api } from "../controllers/prize_api";
 
 const router = express.Router();
 // index
@@ -21,23 +21,24 @@ router.get("/", (req, res) => {
 });
 
 // user api
-router.get("/users", getAllUsers); // normal api get
-router.get("/users/:email", getUserByEmail); // send parameter get
-router.post("/users/login", login); // normal api post
-router.post("/users/register", register); //normal api post
-router.post("/users/reset", reset); // normal api post
+router.get("/users", getAllUsers_api); // normal api get
+router.get("/users/:email", getUserByEmail_api); // send parameter get
+router.post("/users/login", login_api); // normal api post
+router.post("/users/register", register_api); //normal api post
+router.post("/users/reset", reset_api); // normal api post
 
 // lotto api
-router.get("/lottos", getAllLottos); //normal api get
-router.get("/lottos/sold", getSoldLottoNumber); //normal api get
-router.get("/lottos/unsold", getUnSoldLottoNumber); //normal api get
-router.get("/lottos/search", getAllLottos); //normal api get
-router.get("/lottos/search/:num", searchLottoNumber); //send parameter
+router.get("/lottos", getAllLottos_api); //normal api get
+router.get("/lottos/sold", getSoldLottoNumber_api); //normal api get
+router.get("/lottos/unsold", getUnSoldLottoNumber_api); //normal api get
+router.get("/lottos/search", getAllLottos_api); //normal api get
+router.get("/lottos/search/:num", searchLottoNumber_api); //send parameter
 
 // prize api
-router.get("/prizes", getPrizes); //normal api get
-router.get("/prizes/getLPrizes/:prize", getLottosOfPrizesByPrizeTier); //send prizes 1-5
-router.get("/test", test); //normal api get
-router.get("/prizes/randPrize", randPrize); // send by query string ex http://192.168.1.8:3000//lottos/randPrize?prize=7&is_sold=0
+router.get("/test", test_api); //normal api get
+router.get("/prizes", getPrizes_api); //normal api get
+router.get("/prizes/getLPrizes/:prize", getLottosOfPrizesByPrizeTier_api); //send prizes 1-5
+router.get("/prizes/randPrize", randPrize_api); // send by query string ex http://192.168.1.8:3000//lottos/randPrize?prize=7&is_sold=0
+router.get("/prizes/prizeTier", checkTierPrizeLottos_api); // send param by query string uid, lottos_number
 
 export default router;
