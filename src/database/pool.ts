@@ -5,20 +5,22 @@ import path from "path";
 dotenv.config();
 
 export const dbcon = mysql.createPool({
-    connectionLimit: 10,
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
 
 export async function runScript() {
   try {
-    const sqlPath = path.join(__dirname, "LottoDBsetupEdit.sql");
-    const sql = fs.readFileSync("G:/Flutter_Project/JackpotHub888_API/src/database/LottoDBsetupEdit.sql", "utf-8"); 
+    const sqlPath = path.join(__dirname, "init.sql");
+    const sql = fs.readFileSync(sqlPath, "utf-8"); 
     const statements = sql
-      .split(/;\s*$/m) 
+      .split(/;\s*[\r\n]+/) 
       .map(s => s.trim())
       .filter(s => s.length > 0);
 

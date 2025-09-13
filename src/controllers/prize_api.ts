@@ -4,24 +4,11 @@ import { Lottos } from "../models/responses/lottosModel";
 import { Prizes } from "../models/responses/prizesModel";
 import {
   allLottos_fn,
-  buyLotto_fn,
   getLottoByLotto_number_fn,
   soldLottos_fn,
 } from "./lotto_api";
-import { ResultSetHeader } from "mysql2/promise";
-import { getUsersById_fn } from "./user_api";
+import { buyLotto_fn, getUsersById_fn } from "./user_api";
 import { PrizeOfLottos } from "../models/responses/prize_of_lotto_res";
-import { Users } from "../models/responses/usersModel";
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
-// test api path
-export const test_api = async (req: Request, res: Response) => {
-  try {
-    const a = await buyLotto_fn(735785, 1);
-    res.json(a);
-  } catch (error) {}
-};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 

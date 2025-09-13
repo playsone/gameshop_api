@@ -40,6 +40,25 @@ export async function getUsersById_fn(id: number){
     }
 }
 
+
+// pat of get user by id
+export const getUsersById_api = async (req: Request, res: Response) =>{
+  const uid = Number(req.params.uid.trim());
+    try{
+        const usersData = await getUsersById_fn(uid) as Users[];
+         if (usersData.length) return res.status(404).json({ message: "User not found" });
+        res
+        .status(200)
+        .json(usersData[0]);
+    }catch(err){
+        res.status(204).json({message : "User not found"}) 
+    }
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 export async function getUsersByEmail_fn(email: string){
   let duep: boolean = false;
   try{
@@ -57,21 +76,7 @@ export async function getUsersByEmail_fn(email: string){
     }
 }
 
-
-// pat of get user by id
-export const getUsersById_api = async (req: Request, res: Response) =>{
-  const uid = Number(req.params.uid.trim());
-    try{
-        const usersData = await getUsersById_fn(uid) as Users[];
-         if (usersData.length) return res.status(404).json({ message: "User not found" });
-        res
-        .status(200)
-        .json(usersData[0]);
-    }catch(err){
-        res.status(204).json({message : "User not found"}) 
-    }
-}
-
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 export const register_api = async (req: Request, res: Response) => {
   const { email, password, wallet, fullname } = req.body;
@@ -95,6 +100,7 @@ export const register_api = async (req: Request, res: Response) => {
   }
 };
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 export const login_api = async (req: Request, res: Response) => {
@@ -117,19 +123,68 @@ export const login_api = async (req: Request, res: Response) => {
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 export const reset_api = async (req: Request, res: Response) => {
-  try{
+  try {
+    console.log("reset_api called ✅");
     await dbcon.query("DELETE FROM Lottos");
+    console.log("deleted lottos ✅");
     await dbcon.query("DELETE FROM Prizes");
-    await dbcon.query("DELETE FROM Users WHERE role != 1");
-    res.status(200).json({message: "reset success"})
+    console.log("deleted prizes ✅");
+    await dbcon.query("DELETE FROM Users WHERE role IS NULL OR role != 1");
+    console.log("deleted users ✅");
 
-    // or this
-    // const a = await runScript();
-    // res.json(a)
+    res.status(200).json({ message: "reset success" });
+  } catch (err: any) {
+    console.error("reset_api error:", err);
+    res.status(500).json({ message: "error", error: err.message });
+  }
+};
+
+
+export const setupDB_api = async (req: Request, res: Response) => {
+  try{
+    await runScript();
+    res.status(200).json({message: "setup db success"})
+
   }catch(err){
     res.status(500).json({message: "error", err})
   }
 }
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// buy fn
+export async function buyLotto_fn(lotto: number, uid: number){
+  try{
+    const [rows]:any = await dbcon.query("SELECT is_sold FROM Lottos WHERE lotto_number = ?", lotto);
+    const is_sold = rows[0].is_sold;
+    if(is_sold == 0){
+      await dbcon.query("UPDATE Lottos SET uid = ?, is_sold = 1 WHERE lotto_number = ?", [uid, lotto]);
+      return {msg: "buy success"}
+
+    }else if(is_sold == 1){
+      return {msg: "this lotto is sold"}
+
+    }else{
+      return {msg: "error"}
+    }
+
+  }catch(error){
+    throw error;
+  }
+}
+
+// path of buy 
+export const buyLotto_api = async (req:Request, res: Response) => {
+  try {
+    
+  } catch (error) {
+    
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
 

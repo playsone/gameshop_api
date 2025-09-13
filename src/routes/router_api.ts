@@ -1,10 +1,12 @@
 import express from "express";
 import {
+  buyLotto_api,
   getAllUsers_api,
   getUserByEmail_api,
   login_api,
   register_api,
   reset_api,
+  setupDB_api,
 } from "../controllers/user_api";
 import {
   getAllLottos_api,
@@ -12,7 +14,8 @@ import {
   getUnSoldLottoNumber_api,
   searchLottoNumber_api,
 } from "../controllers/lotto_api";
-import { checkTierPrizeLottos_api, claim_prize_api, getLottosOfPrizesByPrizeTier_api, getPrizes_api, randPrize_api, test_api } from "../controllers/prize_api";
+import { checkTierPrizeLottos_api, claim_prize_api, getLottosOfPrizesByPrizeTier_api, getPrizes_api, randPrize_api} from "../controllers/prize_api";
+import { test_api } from "../controllers/forTest_api";
 
 const router = express.Router();
 // index
@@ -25,7 +28,9 @@ router.get("/users", getAllUsers_api); // normal api get
 router.get("/users/:email", getUserByEmail_api); // send parameter get
 router.post("/users/login", login_api); // normal api post
 router.post("/users/register", register_api); //normal api post
-router.post("/users/reset", reset_api); // normal api post
+router.get("/users/reset", reset_api); // normal api post
+router.get("/users/setupDB", setupDB_api); // normal api post
+router.post("/users/buy", buyLotto_api); // normal api post
 
 // lotto api
 router.get("/lottos", getAllLottos_api); //normal api get
@@ -43,3 +48,4 @@ router.get("/prizes/prizeTier", checkTierPrizeLottos_api); // send param by quer
 router.get("/prizes/claimPrize", claim_prize_api); // send param by query string uid, lottos_number, can_claim
 
 export default router;
+ 
