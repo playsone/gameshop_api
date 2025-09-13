@@ -3,7 +3,7 @@ import { dbcon, runScript } from "../database/pool";
 import { Lottos } from "../models/responses/lottosModel";
 import { Prizes } from "../models/responses/prizesModel";
 import {
-  allLottos_fn,
+  getAllLottos_fn,
   getLottoByLotto_number_fn,
   soldLottos_fn,
 } from "./lotto_api";
@@ -206,7 +206,7 @@ async function updateData_fn(
 
 // random prize 1 - 3 tier
 async function rand1_3t_fn(pt: number, is_sold: number) {
-  const allLottosNum = (await allLottos_fn()) as Lottos[];
+  const allLottosNum = (await getAllLottos_fn()) as Lottos[];
   const soldLottosNum = (await soldLottos_fn()) as Lottos[];
 
   try {
@@ -327,6 +327,10 @@ export async function claim_prize_fn(
         return {
           msg: "Claim lotto success get " + check[0].claim_amount + "Bath",
         };
+      }else if(check[0].uid != uid){
+        return {msg: "user not owner of lotto R U Prechar Teacher?"}
+      }else{
+        return {msg: "This lotto is claim"}
       }
     } else {
       return { msg: "Can't claim lotto", can_claim };

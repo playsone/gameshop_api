@@ -7,7 +7,10 @@ import { Lottos } from "../models/responses/lottosModel";
 // get lotto by lotto num
 export async function getLottoByLotto_number_fn(lotto_number: string) {
   try {
-    const [rows] = await dbcon.query("SELECT * FROM Lottos WHERE lotto_number = ?", lotto_number)
+    const [rows] = await dbcon.query(
+      "SELECT * FROM Lottos WHERE lotto_number = ?",
+      lotto_number
+    );
     return rows as Lottos[];
   } catch (error) {
     throw error;
@@ -17,7 +20,7 @@ export async function getLottoByLotto_number_fn(lotto_number: string) {
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 // return all lottos
-export async function allLottos_fn() {
+export async function getAllLottos_fn() {
   try {
     const [rows]: any = await dbcon.query("SELECT * FROM Lottos");
     return rows as Lottos[];
@@ -31,7 +34,7 @@ export async function allLottos_fn() {
 // path of get all lottos
 export const getAllLottos_api = async (req: Request, res: Response) => {
   try {
-    const result = await allLottos_fn();
+    const result = await getAllLottos_fn();
     if (result.length <= 0) {
       res.status(200).json({ message: "Have not Lotto number" });
       return;
@@ -99,22 +102,28 @@ export const getUnSoldLottoNumber_api = async (req: Request, res: Response) => {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
 // path of search lottos by number
 export const searchLottoNumber_api = async (req: Request, res: Response) => {
   const searchTxt: string = req.params.num.trim();
   try {
-    const [results]: any = await dbcon.query(
-      "SELECT * FROM Lottos WHERE lotto_number like ?",
-      [`%${searchTxt}%`]
-    );
-    const lottosData = results as Lottos[];
-    if (lottosData.length == 0)
-      return res
-        .status(200)
-        .json({ message: "HAVE NOT LOTTOS NUMBER", length: lottosData.length });
-    res.status(200).json(lottosData);
+    if (!(searchTxt.length <= 0)) {
+      const [results]: any = await dbcon.query(
+        "SELECT * FROM Lottos WHERE lotto_number like ?",
+        [`%${searchTxt}%`]
+      );
+      const lottosData = results as Lottos[];
+      if (lottosData.length == 0)
+        return res
+          .status(200)
+          .json({
+            message: "HAVE NOT LOTTOS NUMBER",
+            lotto: searchTxt,
+          });
+      res.status(200).json(lottosData);
+    }else{
+      const allLotto = await getAllLottos_fn();
+      res.status(200).json(allLotto);
+    }
   } catch (err) {
     res.status(500).json({ message: err });
   }

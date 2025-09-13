@@ -1,5 +1,4 @@
 
--- ✅ Fix: ปิดวงเล็บให้ครบ
 INSERT INTO Users (email, password, fullname, wallet, role) VALUES
 ('m1@e.com', '$2b$10$TEmLT595zmRNSdXAxRwcQOlQATLtF2j7q5w5Pegzbd0jTCp6r1GBG', 'J-J-Jongkok mai', 1500, 0),
 ('m2@e.com', '$2b$10$TEmLT595zmRNSdXAxRwcQOlQATLtF2j7q5w5Pegzbd0jTCp6r1GBG', '1 tap', 1200, 0),
@@ -13,7 +12,6 @@ WHERE NOT EXISTS (
 	SELECT role FROM Users WHERE role = 1
 );
 
--- ✅ Fix: ปิดวงเล็บให้ครบ
 INSERT INTO Prizes (prize_tier, claim_amount) VALUES
 (0, 0),
 (1, 1000),
@@ -22,14 +20,13 @@ INSERT INTO Prizes (prize_tier, claim_amount) VALUES
 (4, 200),
 (5, 100);
 
--- ✅ สร้างเลขล็อตโต้ 500 ใบ
 INSERT INTO Lottos (lotto_number, price, is_sold, uid)
 SELECT 
     LPAD(FLOOR(RAND()*999999), 6, '0') AS lotto_number,
     80 AS price,
     t.is_sold,
     CASE t.is_sold
-        WHEN 1 THEN FLOOR(RAND()*4) + 1
+        WHEN 1 THEN FLOOR(RAND()* (SELECT COUNT(uid) FROM Users WHERE role != 1)) + 1
         ELSE NULL
     END AS uid
 FROM (
@@ -54,7 +51,15 @@ JOIN (
 ) nums
 LIMIT 500;
 
--- ✅ บังคับให้ uid กระจายไปที่ user 1-4
+DELIMITER $$
+CREATE TRIGGER trg_set_pid_default
+BEFORE DELETE ON Prizes
+FOR EACH ROW
+BEGIN
+    UPDATE Lottos SET pid = 0 WHERE pid = OLD.pid;
+END$$
+DELIMITER ;
+
 UPDATE Lottos SET uid = 1 WHERE uid IS NULL AND is_sold = 1 LIMIT 20;
 UPDATE Lottos SET uid = 2 WHERE uid IS NULL AND is_sold = 1 LIMIT 20;
 UPDATE Lottos SET uid = 3 WHERE uid IS NULL AND is_sold = 1 LIMIT 20;
