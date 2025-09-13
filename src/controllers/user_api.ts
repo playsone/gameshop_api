@@ -40,6 +40,23 @@ export async function getUsersById_fn(id: number){
     }
 }
 
+export async function getUsersByEmail_fn(email: string){
+  let duep: boolean = false;
+  try{
+        const [rows] = await dbcon.query("SELECT * FROM Users WHERE email = ?", [email]);
+        const usersData = rows as Users[];
+         if (usersData.length <= 0){
+          duep = false;
+          return { message: "USER NOT FOUND", duep };
+         } 
+         duep = true;
+        return {usersData, duep};
+
+    }catch(err){
+        throw err;
+    }
+}
+
 
 // pat of get user by id
 export const getUsersById_api = async (req: Request, res: Response) =>{
@@ -57,10 +74,15 @@ export const getUsersById_api = async (req: Request, res: Response) =>{
 
 
 export const register_api = async (req: Request, res: Response) => {
-  const { email, password, money, fullname } = req.body;
+  const { email, password, wallet, fullname } = req.body;
   try {
+    const {usersData, duep} = await getUsersByEmail_fn(email);
+    if(duep){
+      res.status(401).json({msg: "Email is Dueplicate"});
+      return;
+    }
     const passwordHash = await bcrypt.hash(password, 10);
-    const uData = { email, password: passwordHash, fullname, money };
+    const uData = {email: email,password:passwordHash,fullname:fullname,wallet:wallet};
 
     const [results]: any = await dbcon.query("INSERT INTO Users SET ?", uData);
 
@@ -69,7 +91,7 @@ export const register_api = async (req: Request, res: Response) => {
     }
     res.status(400).json({ message: "Failed to create account" });
   } catch (err) {
-    res.status(500).json({ message: "Dueplicate email" });
+    res.status(500).json({ message: "Dueplicate email" , err});
   }
 };
 

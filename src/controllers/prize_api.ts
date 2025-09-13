@@ -2,11 +2,26 @@ import { Request, Response } from "express";
 import { dbcon, runScript } from "../database/pool";
 import { Lottos } from "../models/responses/lottosModel";
 import { Prizes } from "../models/responses/prizesModel";
-import { allLottos_fn, getLottoByLotto_number_fn, soldLottos_fn } from "./lotto_api";
+import {
+  allLottos_fn,
+  buyLotto_fn,
+  getLottoByLotto_number_fn,
+  soldLottos_fn,
+} from "./lotto_api";
 import { ResultSetHeader } from "mysql2/promise";
 import { getUsersById_fn } from "./user_api";
 import { PrizeOfLottos } from "../models/responses/prize_of_lotto_res";
 import { Users } from "../models/responses/usersModel";
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// test api path
+export const test_api = async (req: Request, res: Response) => {
+  try {
+    const a = await buyLotto_fn(735785, 1);
+    res.json(a);
+  } catch (error) {}
+};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -251,18 +266,6 @@ export const randPrize_api = async (req: Request, res: Response) => {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-// test api path
-export const test_api = async (req: Request, res: Response) => {
-  try {
-    const a = await runScript();
-    res.json(a)
-  } catch (error) {
-    
-  }
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
 // fn check prizes
 export async function checkTierPrizeLottos_fn(lotNum: string) {
   try {
@@ -280,17 +283,29 @@ export async function checkTierPrizeLottos_fn(lotNum: string) {
 export const checkTierPrizeLottos_api = async (req: Request, res: Response) => {
   const uid = Number(req.query.uid);
   const lotNum = String(req.query.lottos_number).trim();
-  let can_claim: boolean = false;
+  let can_claim: number = 0;
+  let msg = "";
 
   try {
     const rows = await checkTierPrizeLottos_fn(lotNum);
     const pData = rows[0] as PrizeOfLottos;
 
-    if (pData.prize_tier > 0 && pData.prize_tier <= 5 && pData.uid == uid) {
-      can_claim = true;
+    if (pData.is_claim == 1) {
+      can_claim = 0;
+      msg = "prize got claim";
+    } else if (
+      pData.prize_tier > 0 &&
+      pData.prize_tier <= 5 &&
+      pData.uid == uid &&
+      pData.is_claim == 0
+    ) {
+      can_claim = 1;
+      msg = "can claim";
+    } else {
+      msg = "Something error";
     }
 
-    res.status(200).json({ pData, can_claim });
+    res.status(200).json({ pData, msg, can_claim });
   } catch (error) {
     res.status(500).json({
       error,
@@ -303,36 +318,47 @@ export const checkTierPrizeLottos_api = async (req: Request, res: Response) => {
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 // fn claim prizes
-export async function  claim_prize_fn(can_claim: boolean, uid: number, lotNum: string){
+export async function claim_prize_fn(
+  can_claim: number,
+  uid: number,
+  lotNum: string
+) {
   try {
     const lottoData = await getLottoByLotto_number_fn(lotNum);
     const check = await checkTierPrizeLottos_fn(lotNum);
-    if(can_claim){
-      if((lottoData[0].is_claim == 0) && (check[0].uid == uid)){
-        await dbcon.query("UPDATE Lottos SET is_claim = 1 WHERE lotto_number = ?", lotNum);
-        await dbcon.query("UPDATE Users SET wallet = (wallet + ?) WHERE uid = ?", [])
+
+    if (can_claim == 1) {
+      if (lottoData[0].is_claim == 0 && check[0].uid == uid) {
+        await dbcon.query(
+          "UPDATE Lottos SET is_claim = 1 WHERE lotto_number = ?",
+          lotNum
+        );
+        await dbcon.query(
+          "UPDATE Users SET wallet = (wallet + ?) WHERE uid = ?",
+          [check[0].claim_amount, uid]
+        );
+        return {
+          msg: "Claim lotto success get " + check[0].claim_amount + "Bath",
+        };
       }
-
-    }else{
-
-
+    } else {
+      return { msg: "Can't claim lotto", can_claim };
     }
   } catch (error) {
-    
+    throw error;
   }
 }
 
-
 // path of claim money yes yes yes rich rich rich
 export const claim_prize_api = async (req: Request, res: Response) => {
-  const can_claim = Boolean(req.query.can_cliam);
+  const can_claim = Number(req.query.can_claim);
   const uid = Number(req.query.uid);
   const lotNum = String(req.query.lotto_number).trim();
 
   try {
     const msg = await claim_prize_fn(can_claim, uid, lotNum);
+    res.status(200).json(msg);
   } catch (error) {
-    
+    res.status(500).json(error);
   }
-}
-
+};

@@ -12,7 +12,7 @@ import {
   getUnSoldLottoNumber_api,
   searchLottoNumber_api,
 } from "../controllers/lotto_api";
-import { checkTierPrizeLottos_api, getLottosOfPrizesByPrizeTier_api, getPrizes_api, randPrize_api, test_api } from "../controllers/prize_api";
+import { checkTierPrizeLottos_api, claim_prize_api, getLottosOfPrizesByPrizeTier_api, getPrizes_api, randPrize_api, test_api } from "../controllers/prize_api";
 
 const router = express.Router();
 // index
@@ -40,5 +40,6 @@ router.get("/prizes", getPrizes_api); //normal api get
 router.get("/prizes/getLPrizes/:prize", getLottosOfPrizesByPrizeTier_api); //send prizes 1-5
 router.get("/prizes/randPrize", randPrize_api); // send by query string ex http://192.168.1.8:3000//lottos/randPrize?prize=7&is_sold=0
 router.get("/prizes/prizeTier", checkTierPrizeLottos_api); // send param by query string uid, lottos_number
+router.get("/prizes/claimPrize", claim_prize_api); // send param by query string uid, lottos_number, can_claim
 
 export default router;

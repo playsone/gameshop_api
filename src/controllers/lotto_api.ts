@@ -122,4 +122,32 @@ export const searchLottoNumber_api = async (req: Request, res: Response) => {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
+// buy fn
+export async function buyLotto_fn(lotto: number, uid: number){
+  try{
+    const [rows]:any = await dbcon.query("SELECT is_sold FROM Lottos WHERE lotto_number = ?", lotto);
+    const is_sold = rows[0].is_sold;
+    if(is_sold == 0){
+      await dbcon.query("UPDATE Lottos SET uid = ?, is_sold = 1 WHERE lotto_number = ?", [uid, lotto]);
+      return {msg: "buy success"}
 
+    }else if(is_sold == 1){
+      return {msg: "this lotto is sold"}
+
+    }else{
+      return {msg: "error"}
+    }
+
+  }catch(error){
+    throw error;
+  }
+}
+
+// path of buy 
+export const buyLotto_api = async (req:Request, res: Response) => {
+  try {
+    
+  } catch (error) {
+    
+  }
+}
