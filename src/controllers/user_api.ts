@@ -13,15 +13,34 @@ export const getAllUsers_api = async (req: Request, res: Response) => {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-// path of get user by email
-export const getUserByEmail_api = async (req: Request, res: Response) => {
+export async function getUsersByEmail_fn(email: string) {
+  let duep: boolean = false;
   try {
     const [rows] = await dbcon.query("SELECT * FROM Users WHERE email = ?", [
-      req.params.email,
+      email,
+    ]);
+    const usersData = rows as Users[];
+    if (usersData.length <= 0) {
+      duep = false;
+      return { message: "USER NOT FOUND", duep };
+    }
+    duep = true;
+    return { usersData, duep };
+  } catch (err) {
+    throw err;
+  }
+}
+
+// path of get user by email
+export const getUserByEmail_api = async (req: Request, res: Response) => {
+  const email = req.params.email.trim();
+  try {
+    const [rows] = await dbcon.query("SELECT * FROM Users WHERE email = ?", [
+      email,
     ]);
     const usersData = rows as Users[];
     if (usersData.length)
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: usersData });
     res.status(200).json(usersData[0]);
   } catch (err) {
     res.status(204).json({ message: "User not found" });
@@ -53,25 +72,7 @@ export const getUsersById_api = async (req: Request, res: Response) => {
   }
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
 
-export async function getUsersByEmail_fn(email: string) {
-  let duep: boolean = false;
-  try {
-    const [rows] = await dbcon.query("SELECT * FROM Users WHERE email = ?", [
-      email,
-    ]);
-    const usersData = rows as Users[];
-    if (usersData.length <= 0) {
-      duep = false;
-      return { message: "USER NOT FOUND", duep };
-    }
-    duep = true;
-    return { usersData, duep };
-  } catch (err) {
-    throw err;
-  }
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 

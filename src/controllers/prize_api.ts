@@ -269,7 +269,7 @@ export async function checkTierPrizeLottos_fn(lotNum: string) {
 // path of check prizes
 export const checkTierPrizeLottos_api = async (req: Request, res: Response) => {
   const uid = Number(req.query.uid);
-  const lotNum = String(req.query.lottos_number).trim();
+  const lotNum = String(req.query.lotto_number).trim();
   let can_claim: number = 0;
   let msg = "";
 
@@ -289,7 +289,7 @@ export const checkTierPrizeLottos_api = async (req: Request, res: Response) => {
       can_claim = 1;
       msg = "can claim";
     } else {
-      msg = "Something error";
+      msg = "Unlucky no prize";
     }
 
     res.status(200).json({ pData, msg, can_claim });
