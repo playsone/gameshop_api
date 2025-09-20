@@ -29,7 +29,7 @@ CREATE TABLE Lottos (
     uid          INT DEFAULT NULL,
     pid          INT DEFAULT 0,
     PRIMARY KEY(lid),
-    FOREIGN KEY(uid) REFERENCES Users(uid) ON DELETE SET NULL,
+    FOREIGN KEY(uid) REFERENCES Users(uid),
     FOREIGN KEY(pid) REFERENCES Prizes(prize_tier)
 );
 
@@ -63,7 +63,13 @@ SELECT
     80 AS price,
     t.is_sold,
     CASE t.is_sold
-        WHEN 1 THEN FLOOR(RAND()* (SELECT COUNT(uid) FROM Users WHERE role != 1)) + 1
+        WHEN 1 THEN (
+            SELECT u.uid 
+            FROM Users u 
+            WHERE u.role != 1 
+            ORDER BY RAND() 
+            LIMIT 1
+        )
         ELSE NULL
     END AS uid
 FROM (
@@ -89,14 +95,6 @@ JOIN (
 LIMIT 500;
 
 
-DELIMITER $$
-CREATE TRIGGER trg_set_uid_default
-BEFORE DELETE ON Prizes
-FOR EACH ROW
-BEGIN
-    UPDATE Lottos SET pid = 0 WHERE pid = OLD.pid;
-END$$
-DELIMITER ;
 
 -- ✅ บังคับให้ uid กระจายไปที่ user 1-4
 UPDATE Lottos SET uid = 1 WHERE uid IS NULL AND is_sold = 1 LIMIT 20;
