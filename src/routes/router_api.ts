@@ -2,6 +2,7 @@ import express from "express";
 import {
   buyLotto_api,
   getAllUsers_api,
+  getLottoPrizeByUid_api,
   getUserByEmail_api,
   login_api,
   register_api,
@@ -39,6 +40,7 @@ router.post("/users/register", register_api); //normal api post
 router.get("/users/reset", reset_api); // normal api post
 router.get("/users/setupDB", setupDB_api); // normal api post
 router.get("/users/buy", buyLotto_api); // send query uid, lotto_number
+router.get("/users/:uid", getLottoPrizeByUid_api); // send parameter get
 router.get("/users/:email", getUserByEmail_api); // send parameter get
 
 

@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { dbcon, runScript } from "../database/pool";
 import bcrypt from "bcrypt";
 import { Users } from "../models/responses/usersModel";
-
+import { UserGetPrizeByUidResponse } from "../models/responses/user_get_prize_res";
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 // path of get all user
@@ -39,8 +39,8 @@ export const getUserByEmail_api = async (req: Request, res: Response) => {
       email,
     ]);
     const usersData = rows as Users[];
-    if (usersData.length)
-      return res.status(404).json({ message: usersData });
+    if (!usersData.length)
+      return res.status(404).json({ message: "error" });
     res.status(200).json(usersData[0]);
   } catch (err) {
     res.status(204).json({ message: "User not found" });
@@ -197,3 +197,24 @@ export const buyLotto_api = async (req: Request, res: Response) => {
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
+export async function  getLottoPrizeByUid_fn(uid: number) {
+  try{
+    const [rows] = await dbcon.query("SELECT * FROM Lottos WHERE uid = ? AND pid != 0",[uid]);
+    const data = rows as UserGetPrizeByUidResponse[];
+    return data;
+  }catch(error){
+    throw error;
+  }
+}
+
+
+export const getLottoPrizeByUid_api = async (req: Request, res: Response) => {
+  const uid = Number(req.params.uid);
+
+  try{
+    const data = await getLottoPrizeByUid_fn(uid);
+    res.status(200).json({data});
+  }catch(error){
+    res.status(404).json({msg: "user not found"});
+  }
+}

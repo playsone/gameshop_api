@@ -76,7 +76,8 @@ async function rand5t_fn(pt: number, is_sold: number) {
       );
       return {
         msg: "Update Sucess at prize 5",
-        randLast2Num,
+        lottoRand : randLast2Num,
+        prizeTier : 5,
         numGotPrizes: count[0].c,
       };
 
@@ -96,7 +97,8 @@ async function rand5t_fn(pt: number, is_sold: number) {
       );
       return {
         msg: "Update Sucess at prize 5",
-        randLast2Num,
+        lottoRand : randLast2Num,
+        prizeTier : 5,
         numGotPrizes: count[0].c,
       };
     } else {
@@ -134,6 +136,7 @@ async function rand4t_fn(is_sold: number) {
       return {
         msg: "Update success at prize 4",
         lottoNum: t4[0].t4,
+        
         t4: numGetT4[0].count,
       };
     } else if (is_sold == 1) {
@@ -160,6 +163,7 @@ async function rand4t_fn(is_sold: number) {
       return {
         msg: "Update success at prize 4",
         lottoNum: t4[0].t4,
+        
         t4: numGetT4[0].count,
       };
     }
@@ -190,7 +194,7 @@ async function updateData_fn(
     let msg = {
       msg: "Update success at prize " + pt,
       lottoRand,
-      Prize_tier: pt,
+      prizeTier: pt,
       uidGetPrize: dataOfLottos[ranNum].uid,
     };
 
