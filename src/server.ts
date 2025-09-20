@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import express from "express";
 import router from "./routes/router_api";
 import bodyParser from "body-parser";
+import cors from "cors";
 import os from  "os";
 dotenv.config();
 
@@ -15,6 +16,12 @@ app.use(bodyParser.text()); //parse body to text
 app.use(bodyParser.json()); //parse body to json
 
 app.use('/', router);
+
+app.use(
+  cors({
+    origin: "*",
+  })
+);
 
 
 var ip = "0.0.0.0";
