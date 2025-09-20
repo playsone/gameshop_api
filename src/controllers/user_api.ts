@@ -199,7 +199,7 @@ export const buyLotto_api = async (req: Request, res: Response) => {
 //////////////////////////////////////////////////////////////////////////////////////////////////
 export async function  getLottoPrizeByUid_fn(uid: number) {
   try{
-    const [rows] = await dbcon.query("SELECT * FROM Lottos WHERE uid = ? AND pid != 0",[uid]);
+    const [rows] = await dbcon.query("SELECT * FROM Lottos WHERE uid = ?",[uid]);
     const data = rows as UserGetPrizeByUidResponse[];
     return data;
   }catch(error){
