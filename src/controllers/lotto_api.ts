@@ -39,7 +39,7 @@ export const getAllLottos_api = async (req: Request, res: Response) => {
       res.status(200).json({ message: "Have not Lotto number" });
       return;
     }
-    res.status(200).json(result as Lottos[]);
+    res.status(200).json(result);
   } catch (err) {
     res.status(500).json({ message: err });
   }
