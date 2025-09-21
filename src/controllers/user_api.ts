@@ -52,7 +52,7 @@ export async function getUsersById_fn(id: number) {
   try {
     const [rows] = await dbcon.query("SELECT * FROM Users WHERE uid = ?", [id]);
     const usersData = rows as Users[];
-    if (usersData.length) return { message: "USER NOT FOUND" };
+    if (usersData.length <= 0) return { message: "USER NOT FOUND" };
     return usersData;
   } catch (err) {
     throw err;
@@ -61,10 +61,10 @@ export async function getUsersById_fn(id: number) {
 
 // pat of get user by id
 export const getUsersById_api = async (req: Request, res: Response) => {
-  const uid = Number(req.params.uid.trim());
+  const uid = Number(req.params.uid);
   try {
     const usersData = (await getUsersById_fn(uid)) as Users[];
-    if (usersData.length)
+    if (!usersData.length)
       return res.status(404).json({ message: "User not found" });
     res.status(200).json(usersData[0]);
   } catch (err) {
