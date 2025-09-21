@@ -36,6 +36,7 @@ router.get("/test", test_api); //normal api get
 
 // user api
 router.get("/users", getAllUsers_api); // normal api get
+router.get("/users/prizeOfUser", getLottoPrizeByUid_api); // send parameter get
 router.post("/users/login", login_api); // normal api post
 router.post("/users/register", register_api); //normal api post
 router.get("/users/reset", reset_api); // normal api post
@@ -43,7 +44,6 @@ router.get("/users/setupDB", setupDB_api); // normal api post
 router.get("/users/buy", buyLotto_api); // send query uid, lotto_number
 router.get("/users/:uid", getUsersById_api); // send parameter get
 router.get("/users/:email", getUserByEmail_api); // send parameter get
-
 
 
 // lotto api

@@ -209,7 +209,7 @@ export async function  getLottoPrizeByUid_fn(uid: number) {
 
 
 export const getLottoPrizeByUid_api = async (req: Request, res: Response) => {
-  const uid = Number(req.params.uid);
+  const uid = Number(req.query.idx);
 
   try{
     const data = await getLottoPrizeByUid_fn(uid);
