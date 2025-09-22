@@ -165,12 +165,9 @@ export const newLotto_api = async (req: Request, res: Response) => {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-export async function delLotto_fn(status: number){
+export async function delLotto_fn(){
   try{
-    if(status == 1){
       await dbcon.execute("DELETE FROM Lottos WHERE is_sold = 2");
-    }
-    return;
   }catch(error){
     throw error;
   }
@@ -179,7 +176,7 @@ export async function delLotto_fn(status: number){
 export const delLotto_api = async (req: Request, res: Response) => {
   const status = Number(req.params.status);
   try {
-    await delLotto_fn(status);
+    await delLotto_fn();
     res.status(200).json({msg:"del success"});
   } catch (error) {
     res.status(500).json(error);
