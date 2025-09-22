@@ -3,6 +3,7 @@ import { dbcon, runScript } from "../database/pool";
 import bcrypt from "bcrypt";
 import { Users } from "../models/responses/usersModel";
 import { UserGetPrizeByUidResponse } from "../models/responses/user_get_prize_res";
+import { Lottos } from "../models/responses/lottosModel";
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 // path of get all user
@@ -39,8 +40,7 @@ export const getUserByEmail_api = async (req: Request, res: Response) => {
       email,
     ]);
     const usersData = rows as Users[];
-    if (!usersData.length)
-      return res.status(404).json({ message: "error" });
+    if (!usersData.length) return res.status(404).json({ message: "error" });
     res.status(200).json(usersData[0]);
   } catch (err) {
     res.status(204).json({ message: "User not found" });
@@ -53,7 +53,7 @@ export async function getUsersById_fn(id: number) {
     const [rows] = await dbcon.query("SELECT * FROM Users WHERE uid = ?", [id]);
     const usersData = rows as Users[];
     if (usersData.length <= 0) return { message: "USER NOT FOUND" };
-    return usersData;
+    return usersData[0];
   } catch (err) {
     throw err;
   }
@@ -63,16 +63,13 @@ export async function getUsersById_fn(id: number) {
 export const getUsersById_api = async (req: Request, res: Response) => {
   const uid = Number(req.params.uid);
   try {
-    const usersData = (await getUsersById_fn(uid)) as Users[];
-    if (!usersData.length)
-      return res.status(404).json({ message: "User not found" });
-    res.status(200).json(usersData[0]);
+    const usersData = (await getUsersById_fn(uid)) as Users;
+    if (!usersData) return res.status(404).json({ message: "User not found" });
+    res.status(200).json(usersData);
   } catch (err) {
     res.status(204).json({ message: "User not found" });
   }
 };
-
-
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -118,14 +115,12 @@ export const login_api = async (req: Request, res: Response) => {
       res.status(401).json({ message: "email or password worng!!!" });
       return false;
     }
-    return res
-      .status(200)
-      .json({
-        message: "Login Success",
-        role: userData.role,
-        is_login: true,
-        id: userData.uid,
-      });
+    return res.status(200).json({
+      message: "Login Success",
+      role: userData.role,
+      is_login: true,
+      id: userData.uid,
+    });
   } catch (error) {
     res.status(401).json({ message: "email or password worng!!!" });
   }
@@ -161,19 +156,39 @@ export const setupDB_api = async (req: Request, res: Response) => {
 export async function buyLotto_fn(lotto: string, uid: number) {
   try {
     const [rows]: any = await dbcon.query(
-      "SELECT is_sold FROM Lottos WHERE lotto_number = ?",
+      "SELECT * FROM Lottos WHERE lotto_number = ?",
       lotto
     );
+    let lottoData: any;
 
-    if(rows.length <= 0) return {msg: "Have not lotto number"}
+    if (rows.length >= 0) {
+      lottoData = rows[0] as Lottos;
+    }
 
-    const is_sold = rows[0].is_sold;
+    const userData = (await getUsersById_fn(uid)) as Users;
+    if (userData.wallet < lottoData.price)
+      return { msg: "Have not enough money" };
+    if (rows.length <= 0) return { msg: "Have not lotto number" };
+
+    const is_sold = lottoData.is_sold;
     if (is_sold == 0) {
+      await dbcon.query("UPDATE Users SET wallet = wallet - ? WHERE uid = ?", [
+        lottoData.price,
+        uid,
+      ]);
       await dbcon.query(
         "UPDATE Lottos SET uid = ?, is_sold = 1 WHERE lotto_number = ?",
         [uid, lotto]
       );
-      return { msg: "buy success" };
+      return {
+        msg:
+          "buy success user uid = " +
+          uid +
+          " discount = " +
+          lottoData.price +
+          " balances = " +
+          (userData.wallet - lottoData.price),
+      };
     } else if (is_sold == 1) {
       return { msg: "this lotto is sold" };
     } else {
@@ -197,24 +212,25 @@ export const buyLotto_api = async (req: Request, res: Response) => {
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
-export async function  getLottoPrizeByUid_fn(uid: number) {
-  try{
-    const [rows] = await dbcon.query("SELECT * FROM Lottos WHERE uid = ?",[uid]);
+export async function getLottoPrizeByUid_fn(uid: number) {
+  try {
+    const [rows] = await dbcon.query("SELECT * FROM Lottos WHERE uid = ?", [
+      uid,
+    ]);
     const data = rows as UserGetPrizeByUidResponse[];
     return data;
-  }catch(error){
+  } catch (error) {
     throw error;
   }
 }
 
-
 export const getLottoPrizeByUid_api = async (req: Request, res: Response) => {
   const uid = Number(req.query.idx);
 
-  try{
+  try {
     const data = await getLottoPrizeByUid_fn(uid);
-    res.status(200).json({data});
-  }catch(error){
-    res.status(404).json({msg: "user not found"});
+    res.status(200).json({ data });
+  } catch (error) {
+    res.status(404).json({ msg: "user not found" });
   }
-}
+};

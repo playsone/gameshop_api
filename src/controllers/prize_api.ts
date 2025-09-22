@@ -294,13 +294,12 @@ export const checkTierPrizeLottos_api = async (req: Request, res: Response) => {
       msg = "can claim";
     } else {
       msg = "Unlucky no prize";
+      can_claim = 0;
     }
 
-    res.status(200).json({ pData, msg, can_claim });
+    res.status(200).json({can_claim });
   } catch (error) {
     res.status(500).json({
-      error,
-      message: "Lotto number not found",
       can_claim,
     });
   }

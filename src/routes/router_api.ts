@@ -14,6 +14,7 @@ import {
   getAllLottos_api,
   getSoldLottoNumber_api,
   getUnSoldLottoNumber_api,
+  newLotto_api,
   searchLottoNumber_api,
 } from "../controllers/lotto_api";
 import {
@@ -50,6 +51,7 @@ router.get("/users/:email", getUserByEmail_api); // send parameter get
 router.get("/lottos", getAllLottos_api); //normal api get
 router.get("/lottos/sold", getSoldLottoNumber_api); //normal api get
 router.get("/lottos/unsold", getUnSoldLottoNumber_api); //normal api get
+router.get("/lottos/newLotto", newLotto_api);
 router.get("/lottos/search/:num", searchLottoNumber_api); //send parameter
 
 // prize api

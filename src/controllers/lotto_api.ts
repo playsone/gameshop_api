@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { dbcon } from "../database/pool";
 import { Lottos } from "../models/responses/lottosModel";
+import { log } from "console";
+import { stringify } from "querystring";
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -130,3 +132,32 @@ export const searchLottoNumber_api = async (req: Request, res: Response) => {
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
+export async function  newLotto_fn(price: number, amount: number){
+  let lotto:string;
+  
+  try{
+    await dbcon.execute("DELETE FROM Lottos");
+    for(let i = 1; i <= amount; i++){
+      lotto = String(Math.floor(Math.random() * 999999)).padStart(6, "0");
+      await dbcon.execute("INSERT INTO Lottos(lotto_number, price) VALUES (?, ?)", [lotto, price]);
+    }
+    const [rows] = await dbcon.query("SELECT * FROM Lottos");
+    const lottoData = rows as Lottos[];
+    return {msg: "Insert Success", lottoData}
+  }catch(error){
+    throw {msg: "Can't insert"}
+  }
+}
+
+
+
+export const newLotto_api = async (req: Request, res: Response) => {
+  const price = Number(req.query.price);
+  const amount = Number(req.query.amount);
+  try{
+    const lottoData = await newLotto_fn(price, amount);
+    res.status(200).json(lottoData);
+  }catch(error){
+    res.status(500).json(error);
+  }
+}
