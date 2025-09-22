@@ -84,7 +84,7 @@ async function rand5t_fn(pt: number, is_sold: number) {
       // 1 = all
     } else if (pt == 5 && is_sold == 1) {
       await dbcon.query(
-        "UPDATE Prizes SET lotto_number = ? WHERE prize_tier = 5 AND is_sold != 2",
+        "UPDATE Prizes SET lotto_number = ? WHERE prize_tier = 5",
         randLast2Num
       );
       await dbcon.query("UPDATE Lottos SET pid = 0 WHERE pid = 5");
