@@ -54,9 +54,9 @@ router.get("/lottos", getAllLottos_api); //normal api get
 router.get("/lottos/sold", getSoldLottoNumber_api); //normal api get
 router.get("/lottos/unsold", getUnSoldLottoNumber_api); //normal api get
 router.get("/lottos/newLotto", newLotto_api);
-router.get("/lottos/search/:num", searchLottoNumber_api);
-router.get("/lottos/delLotto/:status", delLotto_api);
+router.get("/lottos/delLotto", delLotto_api);
 router.get("/lottos/launch", launch_api); //send parameter
+router.get("/lottos/search/:num", searchLottoNumber_api);
 
 // prize api
 router.get("/prizes", getPrizes_api); //normal api get
