@@ -13,6 +13,7 @@ import {
 import {
   delLotto_api,
   getAllLottos_api,
+  getBetaLotto_api,
   getSoldLottoNumber_api,
   getUnSoldLottoNumber_api,
   launch_api,
@@ -53,6 +54,7 @@ router.get("/users/:email", getUserByEmail_api); // send parameter get
 router.get("/lottos", getAllLottos_api); //normal api get
 router.get("/lottos/sold", getSoldLottoNumber_api); //normal api get
 router.get("/lottos/unsold", getUnSoldLottoNumber_api); //normal api get
+router.get("/lottos/betaLotto", getBetaLotto_api); 
 router.get("/lottos/newLotto", newLotto_api);
 router.get("/lottos/delLotto", delLotto_api);
 router.get("/lottos/launch", launch_api); //send parameter

@@ -201,3 +201,32 @@ export const launch_api = async (req: Request, res: Response) => {
   }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+
+// get lottos number is sold
+export async function getBetaLotto_fn() {
+  try {
+    const [rows]: any = await dbcon.query(
+      "SELECT * FROM Lottos WHERE is_sold = 2"
+    );
+    return rows as Lottos[];
+  } catch (error) {
+    throw error;
+  }
+}
+
+//path of get lotto number is sold
+export const getBetaLotto_api = async (req: Request, res: Response) => {
+  try {
+    const result = await getBetaLotto_fn();
+    if (result.length <= 0) {
+      res.status(200).json({ message: "HAVE NOT LOTTOS NUMBER" });
+      return;
+    }
+    res.status(200).json(result);
+  } catch (err) {
+    res.status(500).json({ message: err });
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////
