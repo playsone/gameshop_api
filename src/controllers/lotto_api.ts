@@ -174,7 +174,6 @@ export async function delLotto_fn(){
 }
 
 export const delLotto_api = async (req: Request, res: Response) => {
-  const status = Number(req.params.status);
   try {
     await delLotto_fn();
     res.status(200).json({msg:"del success"});
