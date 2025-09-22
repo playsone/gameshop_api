@@ -155,7 +155,7 @@ export const setupDB_api = async (req: Request, res: Response) => {
 export async function buyLotto_fn(lotto: string, uid: number) {
   try {
     const [rows]: any = await dbcon.query(
-      "SELECT * FROM Lottos WHERE lotto_number = ?",
+      "SELECT * FROM Lottos WHERE lotto_number = ? AND is_sold != 2",
       lotto
     );
     let lottoData: any;
@@ -213,7 +213,7 @@ export const buyLotto_api = async (req: Request, res: Response) => {
 //////////////////////////////////////////////////////////////////////////////////////////////////
 export async function getLottoPrizeByUid_fn(uid: number) {
   try {
-    const [rows] = await dbcon.query("SELECT * FROM Lottos WHERE uid = ?", [
+    const [rows] = await dbcon.query("SELECT * FROM Lottos WHERE uid = ? AND is_sold != 2", [
       uid,
     ]);
     const data = rows as UserGetPrizeByUidResponse[];

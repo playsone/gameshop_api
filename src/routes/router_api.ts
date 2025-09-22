@@ -11,9 +11,11 @@ import {
   setupDB_api,
 } from "../controllers/user_api";
 import {
+  delLotto_api,
   getAllLottos_api,
   getSoldLottoNumber_api,
   getUnSoldLottoNumber_api,
+  launch_api,
   newLotto_api,
   searchLottoNumber_api,
 } from "../controllers/lotto_api";
@@ -52,7 +54,9 @@ router.get("/lottos", getAllLottos_api); //normal api get
 router.get("/lottos/sold", getSoldLottoNumber_api); //normal api get
 router.get("/lottos/unsold", getUnSoldLottoNumber_api); //normal api get
 router.get("/lottos/newLotto", newLotto_api);
-router.get("/lottos/search/:num", searchLottoNumber_api); //send parameter
+router.get("/lottos/search/:num", searchLottoNumber_api);
+router.get("/lottos/delLotto/:status", delLotto_api);
+router.get("/lottos/launch", launch_api); //send parameter
 
 // prize api
 router.get("/prizes", getPrizes_api); //normal api get

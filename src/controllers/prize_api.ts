@@ -43,7 +43,7 @@ export const getLottosOfPrizesByPrizeTier_api = async (
 
   try {
     const [rows] = await dbcon.query(
-      "SELECT * FROM Lottos WHERE pid = ?",
+      "SELECT * FROM Lottos WHERE pid = ? AND is_sold != 2",
       prizeT
     );
     const dataLottos = rows as Lottos[];
@@ -66,7 +66,7 @@ async function rand5t_fn(pt: number, is_sold: number) {
         "UPDATE Prizes SET lotto_number = ? WHERE prize_tier = 5",
         randLast2Num
       );
-      await dbcon.query("UPDATE Lottos SET pid = 0 WHERE pid = 5");
+      await dbcon.query("UPDATE Lottos SET pid = 0 WHERE pid = 5 AND is_sold != 2");
       await dbcon.query(
         "UPDATE Lottos SET pid = 5 WHERE lotto_number like ? AND is_sold = 1 AND lotto_number NOT IN ( SELECT lotto_number FROM(SELECT lotto_number FROM Lottos WHERE pid < 5 AND pid > 0 ) as c)",
         [`%${randLast2Num}`]
@@ -84,16 +84,16 @@ async function rand5t_fn(pt: number, is_sold: number) {
       // 1 = all
     } else if (pt == 5 && is_sold == 1) {
       await dbcon.query(
-        "UPDATE Prizes SET lotto_number = ? WHERE prize_tier = 5",
+        "UPDATE Prizes SET lotto_number = ? WHERE prize_tier = 5 AND is_sold != 2",
         randLast2Num
       );
       await dbcon.query("UPDATE Lottos SET pid = 0 WHERE pid = 5");
       await dbcon.query(
-        "UPDATE Lottos SET pid = 5 WHERE lotto_number like ? AND lotto_number NOT IN ( SELECT lotto_number FROM(SELECT lotto_number FROM Lottos WHERE pid < 5 AND pid > 0 ) as c)",
+        "UPDATE Lottos SET pid = 5 WHERE lotto_number like ? AND is_sold != 2 AND lotto_number NOT IN ( SELECT lotto_number FROM(SELECT lotto_number FROM Lottos WHERE pid < 5 AND pid > 0 ) as c)",
         [`%${randLast2Num}`]
       );
       const [count]: any = await dbcon.query(
-        "SELECT COUNT(lotto_number) as c FROM Lottos WHERE pid = 5"
+        "SELECT COUNT(lotto_number) as c FROM Lottos WHERE pid = 5 AND is_sold != 2"
       );
       return {
         msg: "Update Sucess at prize 5",
@@ -154,7 +154,7 @@ async function rand4t_fn(is_sold: number) {
       );
       await dbcon.query("UPDATE Lottos SET pid = 0 WHERE pid = 4");
       await dbcon.query(
-        "UPDATE Lottos SET pid = 4 WHERE lotto_number like ? AND lotto_number NOT IN ( SELECT lotto_number FROM(SELECT lotto_number FROM Lottos WHERE pid < 5 AND pid > 0 ) as c)",
+        "UPDATE Lottos SET pid = 4 WHERE lotto_number like ? AND is_sold != 2 AND lotto_number NOT IN ( SELECT lotto_number FROM(SELECT lotto_number FROM Lottos WHERE pid < 5 AND pid > 0 ) as c)",
         [`%${t4[0].t4}`]
       );
       const [numGetT4]: any = await dbcon.query(
@@ -185,7 +185,7 @@ async function updateData_fn(
       "UPDATE Prizes SET lotto_number = ? WHERE prize_tier = ?",
       [lottoRand, pt]
     );
-    await dbcon.query("UPDATE Lottos SET pid = 0 WHERE pid = ?", pt);
+    await dbcon.query("UPDATE Lottos SET pid = 0 WHERE pid = ? AND is_sold != 2", pt);
     await dbcon.query("UPDATE Lottos SET pid = ? WHERE lotto_number = ?", [
       pt,
       lottoRand,
@@ -275,7 +275,6 @@ export const checkTierPrizeLottos_api = async (req: Request, res: Response) => {
   const uid = Number(req.query.uid);
   const lotNum = String(req.query.lotto_number).trim();
   let can_claim: number = 0;
-  let msg = "";
 
   try {
     const rows = await checkTierPrizeLottos_fn(lotNum);
@@ -283,7 +282,6 @@ export const checkTierPrizeLottos_api = async (req: Request, res: Response) => {
 
     if (pData.is_claim == 1) {
       can_claim = 0;
-      msg = "prize got claim";
     } else if (
       pData.prize_tier > 0 &&
       pData.prize_tier <= 5 &&
@@ -291,9 +289,7 @@ export const checkTierPrizeLottos_api = async (req: Request, res: Response) => {
       pData.is_claim == 0
     ) {
       can_claim = 1;
-      msg = "can claim";
     } else {
-      msg = "Unlucky no prize";
       can_claim = 0;
     }
 
