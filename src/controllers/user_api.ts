@@ -131,7 +131,6 @@ export const login_api = async (req: Request, res: Response) => {
 export const reset_api = async (req: Request, res: Response) => {
   try {
     await dbcon.query("DELETE FROM Lottos");
-    await dbcon.query("DELETE FROM Prizes");
     await dbcon.query("DELETE FROM Users WHERE role != 1");
 
     res.status(200).json({ message: "reset success" });

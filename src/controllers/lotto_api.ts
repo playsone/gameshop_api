@@ -143,7 +143,7 @@ export async function  newLotto_fn(price: number, amount: number){
     }
     const [rows] = await dbcon.query("SELECT * FROM Lottos");
     const lottoData = rows as Lottos[];
-    return {msg: "Insert Success", lottoData}
+    return {lottoData}
   }catch(error){
     throw {msg: "Can't insert"}
   }
