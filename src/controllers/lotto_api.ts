@@ -194,7 +194,7 @@ export async function launch_fn() {
 
 export async function deleteAllLotto_fn() {
   try {
-    await dbcon.execute("DELETE FROM Lottos");
+    await dbcon.execute("DELETE FROM Lottos WHERE is_sold != 2");
   } catch (error) {
     throw error;
   }
