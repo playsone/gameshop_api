@@ -24,7 +24,9 @@ export async function getLottoByLotto_number_fn(lotto_number: string) {
 // return all lottos
 export async function getAllLottos_fn() {
   try {
-    const [rows]: any = await dbcon.query("SELECT * FROM Lottos WHERE is_sold != 2");
+    const [rows]: any = await dbcon.query(
+      "SELECT * FROM Lottos WHERE is_sold != 2"
+    );
     return rows as Lottos[];
   } catch (error) {
     throw error;
@@ -115,14 +117,12 @@ export const searchLottoNumber_api = async (req: Request, res: Response) => {
       );
       const lottosData = results as Lottos[];
       if (lottosData.length == 0)
-        return res
-          .status(200)
-          .json({
-            message: "HAVE NOT LOTTOS NUMBER",
-            lotto: searchTxt,
-          });
+        return res.status(200).json({
+          message: "HAVE NOT LOTTOS NUMBER",
+          lotto: searchTxt,
+        });
       res.status(200).json(lottosData);
-    }else{
+    } else {
       const allLotto = await getAllLottos_fn();
       res.status(200).json(allLotto);
     }
@@ -132,43 +132,43 @@ export const searchLottoNumber_api = async (req: Request, res: Response) => {
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
-export async function  newLotto_fn(price: number, amount: number){
-  let lotto:string;
-  
-  try{
+export async function newLotto_fn(price: number, amount: number) {
+  let lotto: string;
+
+  try {
     await dbcon.execute("DELETE FROM Lottos WHERE is_sold = 2");
-    for(let i = 1; i <= amount; i++){
+    for (let i = 1; i <= amount; i++) {
       lotto = String(Math.floor(Math.random() * 999999)).padStart(6, "0");
-      await dbcon.execute("INSERT INTO Lottos(lotto_number, price, is_sold) VALUES (?, ?, ?)", [lotto, price, 2]);
+      await dbcon.execute(
+        "INSERT INTO Lottos(lotto_number, price, is_sold) VALUES (?, ?, ?)",
+        [lotto, price, 2]
+      );
     }
     const [rows] = await dbcon.query("SELECT * FROM Lottos WHERE is_sold = 2");
     const lottoData = rows as Lottos[];
-    return {lottoData}
-  }catch(error){
-    throw {msg: "Can't insert"}
+    return { lottoData };
+  } catch (error) {
+    throw { msg: "Can't insert" };
   }
 }
-
-
 
 export const newLotto_api = async (req: Request, res: Response) => {
   const price = Number(req.query.price);
   const amount = Number(req.query.amount);
-  try{
+  try {
     const lottoData = await newLotto_fn(price, amount);
     res.status(200).json(lottoData);
-  }catch(error){
+  } catch (error) {
     res.status(500).json(error);
   }
-}
-
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-export async function delLotto_fn(){
-  try{
-      await dbcon.execute("DELETE FROM Lottos WHERE is_sold = 2");
-  }catch(error){
+export async function delLotto_fn() {
+  try {
+    await dbcon.execute("DELETE FROM Lottos WHERE is_sold = 2");
+  } catch (error) {
     throw error;
   }
 }
@@ -176,30 +176,45 @@ export async function delLotto_fn(){
 export const delLotto_api = async (req: Request, res: Response) => {
   try {
     await delLotto_fn();
-    res.status(200).json({msg:"del success"});
+    res.status(200).json({ msg: "del success" });
   } catch (error) {
     res.status(500).json(error);
   }
-}
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-export async function launch_fn(){
-  try{
+export async function launch_fn() {
+  try {
     await dbcon.execute("UPDATE Lottos SET is_sold = 0 WHERE is_sold = 2");
-  }catch(error){
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function deleteAllLotto_fn() {
+  try {
+    await dbcon.execute("DELETE FROM Lottos");
+  } catch (error) {
     throw error;
   }
 }
 
 export const launch_api = async (req: Request, res: Response) => {
   try {
-    await launch_fn();
-    res.status(200).json({msg:"launch success"});
+    const rows = await getBetaLotto_fn();
+    if (rows.length <= 0) {
+      res.status(200).json({ msg: "have not beta lotto" });
+    }else{
+      await deleteAllLotto_fn();
+      await launch_fn();
+    }
+    
+    res.status(200).json({ msg: "launch success" });
   } catch (error) {
     res.status(500).json(error);
   }
-}
+};
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
