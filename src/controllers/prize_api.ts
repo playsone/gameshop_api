@@ -9,6 +9,7 @@ import {
 } from "./lotto_api";
 import { buyLotto_fn, getUsersById_fn } from "./user_api";
 import { PrizeOfLottos } from "../models/responses/prize_of_lotto_res";
+import { error } from "console";
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -66,7 +67,9 @@ async function rand5t_fn(pt: number, is_sold: number) {
         "UPDATE Prizes SET lotto_number = ? WHERE prize_tier = 5",
         randLast2Num
       );
-      await dbcon.query("UPDATE Lottos SET pid = 0 WHERE pid = 5 AND is_sold != 2");
+      await dbcon.query(
+        "UPDATE Lottos SET pid = 0 WHERE pid = 5 AND is_sold != 2"
+      );
       await dbcon.query(
         "UPDATE Lottos SET pid = 5 WHERE lotto_number like ? AND is_sold = 1 AND lotto_number NOT IN ( SELECT lotto_number FROM(SELECT lotto_number FROM Lottos WHERE pid < 5 AND pid > 0 ) as c)",
         [`%${randLast2Num}`]
@@ -76,8 +79,8 @@ async function rand5t_fn(pt: number, is_sold: number) {
       );
       return {
         msg: "Update Sucess at prize 5",
-        lottoRand : randLast2Num,
-        prizeTier : 5,
+        lottoRand: randLast2Num,
+        prizeTier: 5,
         numGotPrizes: count[0].c,
       };
 
@@ -97,8 +100,8 @@ async function rand5t_fn(pt: number, is_sold: number) {
       );
       return {
         msg: "Update Sucess at prize 5",
-        lottoRand : randLast2Num,
-        prizeTier : 5,
+        lottoRand: randLast2Num,
+        prizeTier: 5,
         numGotPrizes: count[0].c,
       };
     } else {
@@ -136,7 +139,7 @@ async function rand4t_fn(is_sold: number) {
       return {
         msg: "Update success at prize 4",
         lottoNum: t4[0].t4,
-        
+
         t4: numGetT4[0].count,
       };
     } else if (is_sold == 1) {
@@ -163,7 +166,7 @@ async function rand4t_fn(is_sold: number) {
       return {
         msg: "Update success at prize 4",
         lottoNum: t4[0].t4,
-        
+
         t4: numGetT4[0].count,
       };
     }
@@ -185,7 +188,10 @@ async function updateData_fn(
       "UPDATE Prizes SET lotto_number = ? WHERE prize_tier = ?",
       [lottoRand, pt]
     );
-    await dbcon.query("UPDATE Lottos SET pid = 0 WHERE pid = ? AND is_sold != 2", pt);
+    await dbcon.query(
+      "UPDATE Lottos SET pid = 0 WHERE pid = ? AND is_sold != 2",
+      pt
+    );
     await dbcon.query("UPDATE Lottos SET pid = ? WHERE lotto_number = ?", [
       pt,
       lottoRand,
@@ -264,7 +270,8 @@ export async function checkTierPrizeLottos_fn(lotNum: string) {
       "SELECT l.lotto_number, p.prize_tier, p.claim_amount, l.uid, l.is_claim FROM Prizes AS p, Lottos AS l WHERE p.prize_tier = l.pid AND l.lotto_number = ?",
       [lotNum]
     );
-    return rows as PrizeOfLottos[];
+    const data = rows as PrizeOfLottos[];
+    return data[0];
   } catch (error) {
     throw error;
   }
@@ -274,13 +281,13 @@ export async function checkTierPrizeLottos_fn(lotNum: string) {
 export const checkTierPrizeLottos_api = async (req: Request, res: Response) => {
   const uid = Number(req.query.uid);
   const lotNum = String(req.query.lotto_number).trim();
-  
+
   let can_claim: number = 0;
 
   try {
-    const rows = await checkTierPrizeLottos_fn(lotNum);
-    const pData = rows[0] as PrizeOfLottos;
+    const pData = await checkTierPrizeLottos_fn(lotNum);
 
+    if(pData == undefined) throw error;
     if (pData.is_claim == 1) {
       can_claim = 0;
     } else if (
@@ -294,7 +301,7 @@ export const checkTierPrizeLottos_api = async (req: Request, res: Response) => {
       can_claim = 0;
     }
 
-    res.status(200).json({can_claim });
+    res.status(200).json({ can_claim });
   } catch (error) {
     res.status(500).json({
       can_claim,
@@ -314,26 +321,27 @@ export async function claim_prize_fn(
     const lottoData = await getLottoByLotto_number_fn(lotNum);
     const check = await checkTierPrizeLottos_fn(lotNum);
 
+    if(lottoData == undefined) throw error;
     if (can_claim == 1) {
-      if (lottoData[0].is_claim == 0 && check[0].uid == uid) {
+      if (lottoData[0].is_claim == 0 && check.uid == uid) {
         await dbcon.query(
           "UPDATE Lottos SET is_claim = 1 WHERE lotto_number = ?",
           [lotNum]
         );
         await dbcon.query(
           "UPDATE Users SET wallet = (wallet + ?) WHERE uid = ?",
-          [check[0].claim_amount, uid]
+          [check.claim_amount, uid]
         );
         return {
-          msg: "Claim lotto success get " + check[0].claim_amount + "Bath",
+          msg: "Claim lotto success get " + check.claim_amount + "Bath",
         };
-      }else if(check[0].uid != uid){
-        return {msg: "user not owner of lotto R U Prechar Teacher?"}
-      }else{
-        return {msg: "This lotto is claim"}
+      } else if (check.uid != uid) {
+        return { msg: "user not owner of lotto R U Prechar Teacher?" };
+      } else {
+        return { msg: "This lotto is claim" };
       }
     } else {
-      return { msg: "Can't claim lotto"};
+      return { msg: "Can't claim lotto" };
     }
   } catch (error) {
     throw error;

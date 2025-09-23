@@ -24,7 +24,7 @@ export async function getLottoByLotto_number_fn(lotto_number: string) {
 // return all lottos
 export async function getAllLottos_fn() {
   try {
-    const [rows]: any = await dbcon.query(
+    const [rows] = await dbcon.query(
       "SELECT * FROM Lottos WHERE is_sold != 2"
     );
     return rows as Lottos[];
