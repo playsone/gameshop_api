@@ -318,7 +318,7 @@ export async function claim_prize_fn(
       if (lottoData[0].is_claim == 0 && check[0].uid == uid) {
         await dbcon.query(
           "UPDATE Lottos SET is_claim = 1 WHERE lotto_number = ?",
-          lotNum
+          [lotNum]
         );
         await dbcon.query(
           "UPDATE Users SET wallet = (wallet + ?) WHERE uid = ?",
@@ -333,7 +333,7 @@ export async function claim_prize_fn(
         return {msg: "This lotto is claim"}
       }
     } else {
-      return { msg: "Can't claim lotto", can_claim };
+      return { msg: "Can't claim lotto"};
     }
   } catch (error) {
     throw error;
