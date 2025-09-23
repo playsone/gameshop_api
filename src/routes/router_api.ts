@@ -25,6 +25,7 @@ import {
   claim_prize_api,
   getLottosOfPrizesByPrizeTier_api,
   getPrizes_api,
+  isRandedPrize_api,
   randPrize_api,
 } from "../controllers/prize_api";
 import { test_api } from "../controllers/forTest_api";
@@ -62,6 +63,7 @@ router.get("/lottos/search/:num", searchLottoNumber_api);
 
 // prize api
 router.get("/prizes", getPrizes_api); //normal api get
+router.get("/prizes/isRandedPrizes", isRandedPrize_api)
 router.get("/prizes/prizeTier", checkTierPrizeLottos_api); // send param by query string uid, lottos_number
 router.get("/prizes/claimPrize", claim_prize_api); // send param by query string uid, lottos_number, can_claim
 router.get("/prizes/randPrize", randPrize_api); // send by query string ex http://192.168.1.8:3000//lottos/randPrize?prize=7&is_sold=0

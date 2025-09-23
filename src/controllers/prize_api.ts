@@ -9,7 +9,7 @@ import {
 } from "./lotto_api";
 import { buyLotto_fn, getUsersById_fn } from "./user_api";
 import { PrizeOfLottos } from "../models/responses/prize_of_lotto_res";
-import { error } from "console";
+import { count, error } from "console";
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -361,3 +361,24 @@ export const claim_prize_api = async (req: Request, res: Response) => {
     res.status(500).json(error);
   }
 };
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+export async function isRandedPrize_fn(){
+  try {
+    const [rows]:any = await dbcon.query("SELECT count(lotto_number) as count from Prizes");
+    return rows;
+  } catch (error) {
+    throw error;
+  }
+
+}
+
+export const isRandedPrize_api = async (req: Request, res: Response) => {
+  try {
+    const count = await isRandedPrize_fn();
+    res.status(200).json(count);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+}
