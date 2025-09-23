@@ -274,6 +274,8 @@ export async function checkTierPrizeLottos_fn(lotNum: string) {
 export const checkTierPrizeLottos_api = async (req: Request, res: Response) => {
   const uid = Number(req.query.uid);
   const lotNum = String(req.query.lotto_number).trim();
+  console.log(uid+" "+lotNum);
+  
   let can_claim: number = 0;
 
   try {
