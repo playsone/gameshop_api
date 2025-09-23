@@ -137,6 +137,7 @@ export async function newLotto_fn(price: number, amount: number) {
 
   try {
     await dbcon.execute("DELETE FROM Lottos WHERE is_sold = 2");
+    await dbcon.execute("UPDATE Prizes SET lotto_number = null");
     for (let i = 1; i <= amount; i++) {
       lotto = String(Math.floor(Math.random() * 999999)).padStart(6, "0");
       await dbcon.execute(
