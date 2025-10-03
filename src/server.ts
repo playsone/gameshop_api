@@ -4,11 +4,20 @@ import express from "express";
 import router from "./routes/router_api";
 import bodyParser from "body-parser";
 import cors from "cors";
-import os from  "os";
+import os from  "os"; 
 dotenv.config();
-
-const port = process.env.PORT || 3006;
+ 
+const port = process.env.PORT || 3000;
 const app = express();
+
+
+app.use(
+  cors({
+    origin: ["https://gameshop-api-u2qx.onrender.com",  'http://localhost:4200'],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.use(express.json());
 
@@ -16,13 +25,6 @@ app.use(bodyParser.text()); //parse body to text
 app.use(bodyParser.json()); //parse body to json
 
 app.use('/', router);
-
-app.use(
-  cors({
-    origin: "*",
-  })
-);
-
 
 var ip = "0.0.0.0";
 const nets = os.networkInterfaces();
