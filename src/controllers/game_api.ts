@@ -352,4 +352,89 @@ export const deleteDiscountCode_api = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ message: "Server error." });
     }
+    
+};
+
+// --- 2.3 ดึงประเภทเกมทั้งหมด (NEW) ---
+export const getAllGameTypes_api = async (req: Request, res: Response) => {
+    try {
+        const [rows] = await dbcon.query<RowDataPacket[]>("SELECT type_id, typename FROM gametype ORDER BY typename ASC");
+        res.status(200).json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error fetching game types." });
+    }
+};
+
+// --- 2.1 ดึงรายการเกมทั้งหมด (Admin View) (NEW) ---
+export const getAllGames_api = async (req: Request, res: Response) => {
+    try {
+        const [rows] = await dbcon.query<RowDataPacket[]>(
+            `SELECT g.game_id, g.name, g.price, g.release_date, g.image, t.typename AS type
+            FROM game g
+            JOIN gametype t ON g.type_id = t.type_id
+            ORDER BY g.game_id DESC`
+        );
+        res.status(200).json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error fetching all games." });
+    }
+};
+
+// ... (Store Views เดิม: getLatestGames_api, searchGames_api, getGameDetails_api, getTopSellerGames_api) ...
+// ... (Basket Management เดิม: addToBasket_api, getBasket_api, removeFromBasket_api) ...
+// ... (Library เดิม: getUserGameLibrary_api) ...
+
+// --- 4.2, 5.3 User ใช้โค้ดส่วนลดในตะกร้า (NEW) ---
+export const applyDiscount_api = async (req: Request, res: Response) => {
+    const uid = Number(req.params.user_id);
+    const { code_name } = req.body;
+    
+    if (!code_name) return res.status(400).json({ message: "Discount code is required." });
+
+    try {
+        // 1. คำนวณราคารวมในตะกร้า
+        const [basketItems] = await dbcon.query<RowDataPacket[]>(
+            `SELECT g.price FROM basket b JOIN game g ON b.game_id = g.game_id WHERE b.uid = ?`,
+            [uid]
+        );
+        if (basketItems.length === 0) return res.status(404).json({ message: "Basket is empty." });
+        const subtotal = basketItems.reduce((sum, item) => sum + item.price, 0);
+
+        // 2. ตรวจสอบโค้ดส่วนลด (5.2: จำกัดจำนวนครั้ง)
+        const [codeRows] = await dbcon.query<RowDataPacket[]>(
+            "SELECT code_id, discount_value, remaining_user FROM discountcode WHERE code_name = ?",
+            [code_name]
+        );
+        const discountCode = codeRows[0];
+        if (!discountCode || discountCode.remaining_user <= 0) {
+             return res.status(400).json({ message: "Invalid or expired discount code." });
+        }
+
+        // 3. ตรวจสอบการใช้ซ้ำ (5.3: 1 ครั้ง/บัญชี)
+        const [usageCheck] = await dbcon.query<RowDataPacket[]>(
+            "SELECT transaction_id FROM gametransaction WHERE user_id = ? AND code_id = ?",
+            [uid, discountCode.code_id]
+        );
+        if (usageCheck.length > 0) {
+            return res.status(409).json({ message: "You have already used this discount code." });
+        }
+        
+        // 4. คำนวณราคาสุทธิ
+        const discountAmount = discountCode.discount_value;
+        const finalTotal = Math.max(0, subtotal - discountAmount);
+
+        return res.status(200).json({
+            message: "Discount applied.",
+            code_name: code_name,
+            subtotal_price: subtotal,
+            discount_value: discountAmount,
+            final_price: finalTotal
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error during discount application." });
+    }
 };
