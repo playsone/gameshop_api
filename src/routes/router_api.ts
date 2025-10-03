@@ -44,7 +44,7 @@ router.put("/users/:user_id/profile", updateUser_api);
 
 
 // =======================================================
-//                     WALLET & PURCHASE
+//                      WALLET & PURCHASE  
 // =======================================================
 router.get("/users/:user_id/wallet", getWalletBalance_api);
 router.get("/users/:user_id/history", getTransactionHistory_api);
