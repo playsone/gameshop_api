@@ -1,235 +1,149 @@
+// controllers/userController.ts
 import { Request, Response } from "express";
-import { dbcon, runScript } from "../database/pool";
+import { dbcon } from "../database/pool";
 import bcrypt from "bcrypt";
-import { Users } from "../models/responses/usersModel";
-import { UserGetPrizeByUidResponse } from "../models/responses/user_get_prize_res";
-import { Lottos } from "../models/responses/lottosModel";
-//////////////////////////////////////////////////////////////////////////////////////////////////
+import { User } from "../models/responses/usersModel";
+import { getUsersByEmail_fn, getUsersByUsername_fn } from "./utilityFunctions";
 
-// path of get all user
-export const getAllUsers_api = async (req: Request, res: Response) => {
-  const [rows] = await dbcon.query("SELECT * FROM Users");
-  res.json(rows);
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
-export async function getUsersByEmail_fn(email: string) {
-  let duep: boolean = false;
-  try {
-    const [rows] = await dbcon.query("SELECT * FROM Users WHERE email = ?", [
-      email,
-    ]);
-    const usersData = rows as Users[];
-    if (usersData.length <= 0) {
-      duep = false;
-      return { message: "USER NOT FOUND", duep };
-    }
-    duep = true;
-    return { usersData, duep };
-  } catch (err) {
-    throw err;
-  }
-}
-
-// path of get user by email
-export const getUserByEmail_api = async (req: Request, res: Response) => {
-  const email = req.params.email.trim();
-  try {
-    const [rows] = await dbcon.query("SELECT * FROM Users WHERE email = ?", [
-      email,
-    ]);
-    const usersData = rows as Users[];
-    if (!usersData.length) return res.status(404).json({ message: "error" });
-    res.status(200).json(usersData[0]);
-  } catch (err) {
-    res.status(204).json({ message: "User not found" });
-  }
-};
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
-export async function getUsersById_fn(id: number) {
-  try {
-    const [rows] = await dbcon.query("SELECT * FROM Users WHERE uid = ?", [id]);
-    const usersData = rows as Users[];
-    if (usersData.length <= 0) return { message: "USER NOT FOUND" };
-    return usersData[0];
-  } catch (err) {
-    throw err;
-  }
-}
-
-// pat of get user by id
-export const getUsersById_api = async (req: Request, res: Response) => {
-  const uid = Number(req.params.uid);
-  try {
-    const usersData = (await getUsersById_fn(uid)) as Users;
-    if (!usersData) return res.status(404).json({ message: "User not found" });
-    res.status(200).json(usersData);
-  } catch (err) {
-    res.status(204).json({ message: "User not found" });
-  }
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * @route POST /api/register
+ * @desc สมัครสมาชิก
+ */
 export const register_api = async (req: Request, res: Response) => {
-  const { email, password, wallet, fullname } = req.body;
-  try {
-    const { usersData, duep } = await getUsersByEmail_fn(email);
-    if (duep) {
-      res.status(401).json({ msg: "Email is Dueplicate" });
-      return;
-    }
-    const passwordHash = await bcrypt.hash(password, 10);
-    const uData = {
-      email: email,
-      password: passwordHash,
-      fullname: fullname,
-      wallet: wallet,
-    };
+    const { username, email, password, image } = req.body;
+    try {
+        const { isDuplicate: isEmailDuplicate } = await getUsersByEmail_fn(email);
+        if (isEmailDuplicate) {
+            return res.status(409).json({ message: "Email is already registered." });
+        }
+        const { isDuplicate: isUsernameDuplicate } = await getUsersByUsername_fn(username);
+        if (isUsernameDuplicate) {
+            return res.status(409).json({ message: "Username is already taken." });
+        }
 
-    const [results]: any = await dbcon.query("INSERT INTO Users SET ?", uData);
+        const passwordHash = await bcrypt.hash(password, 10);
+        
+        const [results]: any = await dbcon.query(
+            "INSERT INTO users(username, email, password, image) VALUES (?, ?, ?, ?)",
+            [username, email, passwordHash, image || null]
+        );
 
-    if (results.affectedRows > 0) {
-      return res.status(201).json({ message: "Account Created" });
+        if (results.affectedRows > 0) {
+            return res.status(201).json({ message: "Account created successfully.", user_id: results.insertId });
+        }
+        res.status(400).json({ message: "Failed to create account." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error during registration.", error: onmessage });
     }
-    res.status(400).json({ message: "Failed to create account" });
-  } catch (err) {
-    res.status(500).json({ message: "Dueplicate email", err });
-  }
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * @route POST /api/login
+ * @desc Login (ค้นหาด้วย username)
+ */
 export const login_api = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-  try {
-    const [results]: any = await dbcon.query(
-      "SELECT * FROM Users WHERE email = ?",
-      email
-    );
-    const userData = results[0] as Users;
-    const isMatch = await bcrypt.compare(password, userData.password);
-    if (!isMatch) {
-      res.status(401).json({ message: "email or password worng!!!" });
-      return false;
+    const { username, password } = req.body; // รับ username และ password
+    try {
+        const [results]: any = await dbcon.query(
+            "SELECT user_id, password, role, username FROM users WHERE username = ?",
+            [username] 
+        );
+        
+        const userData = results[0] as (User | undefined);
+        
+        if (!userData) {
+            return res.status(401).json({ message: "Invalid credentials (Username not found)." });
+        }
+
+        const isMatch = await bcrypt.compare(password, userData.password);
+        
+        if (!isMatch) {
+            return res.status(401).json({ message: "Invalid credentials (Password mismatch)." });
+        }
+
+        return res.status(200).json({
+            message: "Login Success",
+            user_id: userData.user_id,
+            username: userData.username,
+            role: userData.role,
+            is_login: true,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server error during login." });
     }
-    return res.status(200).json({
-      message: "Login Success",
-      role: userData.role,
-      is_login: true,
-      id: userData.uid,
-    });
-  } catch (error) {
-    res.status(401).json({ message: "email or password worng!!!" });
-  }
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * @route PUT /api/users/:user_id
+ * @desc แก้ไขข้อมูลผู้ใช้ / รูปโปรไฟล์
+ */
+export const updateUser_api = async (req: Request, res: Response) => {
+    const user_id = Number(req.params.user_id);
+    const { username, email, image } = req.body;
+    
+    try {
+        const [results]: any = await dbcon.query(
+            "UPDATE users SET username = ?, email = ?, image = ? WHERE user_id = ?",
+            [username, email, image || null, user_id]
+        );
 
-export const reset_api = async (req: Request, res: Response) => {
-  try {
-    await dbcon.query("DELETE FROM Lottos");
-    await dbcon.query("DELETE FROM Users WHERE role != 1");
-
-    res.status(200).json({ message: "reset success" });
-  } catch (err: any) {
-    console.error("reset_api error:", err);
-    res.status(500).json({ message: "error", error: err.message });
-  }
-};
-
-export const setupDB_api = async (req: Request, res: Response) => {
-  try {
-    await runScript();
-    res.status(200).json({ message: "setup db success" });
-  } catch (err) {
-    res.status(500).json({ message: "error", err });
-  }
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-
-// buy fn
-export async function buyLotto_fn(lotto: string, uid: number) {
-  try {
-    const [rows]: any = await dbcon.query(
-      "SELECT * FROM Lottos WHERE lotto_number = ? AND is_sold != 2",
-      lotto
-    );
-    let lottoData: any;
-
-    if (rows.length >= 0) {
-      lottoData = rows[0] as Lottos;
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ message: "User not found or no changes made." });
+        }
+        
+        return res.status(200).json({ message: "User information updated successfully." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error during update (e.g., username/email duplicate).", error: onmessage });
     }
-
-    const userData = (await getUsersById_fn(uid)) as Users;
-    if (userData.wallet < lottoData.price)
-      return { msg: "Have not enough money" };
-    if (rows.length <= 0) return { msg: "Have not lotto number" };
-
-    const is_sold = lottoData.is_sold;
-    if (is_sold == 0) {
-      await dbcon.query("UPDATE Users SET wallet = wallet - ? WHERE uid = ?", [
-        lottoData.price,
-        uid,
-      ]);
-      await dbcon.query(
-        "UPDATE Lottos SET uid = ?, is_sold = 1 WHERE lotto_number = ?",
-        [uid, lotto]
-      );
-      return {
-        msg:
-          "buy success user uid = " +
-          uid +
-          " discount = " +
-          lottoData.price +
-          " balances = " +
-          (userData.wallet - lottoData.price),
-      };
-    } else if (is_sold == 1) {
-      return { msg: "this lotto is sold" };
-    } else {
-      return { msg: "error" };
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-// path of buy
-export const buyLotto_api = async (req: Request, res: Response) => {
-  const uid = Number(req.query.uid);
-  const lotto = String(req.query.lotto_number).trim();
-  try {
-    const result = await buyLotto_fn(lotto, uid);
-    return res.status(200).json(result);
-  } catch (error) {
-    return res.status(500).json(error);
-  }
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-export async function getLottoPrizeByUid_fn(uid: number) {
-  try {
-    const [rows] = await dbcon.query("SELECT * FROM Lottos WHERE uid = ? AND is_sold != 2", [
-      uid,
-    ]);
-    const data = rows as UserGetPrizeByUidResponse[];
-    return data;
-  } catch (error) {
-    throw error;
-  }
-}
+/**
+ * @route GET /api/users/:user_id/profile
+ * @desc ดูข้อมูลผู้ใช้
+ */
+export const getUserProfile_api = async (req: Request, res: Response) => {
+    const user_id = Number(req.params.user_id);
+    try {
+        const [rows] = await dbcon.query(
+            "SELECT user_id, username, email, image, wallet, role FROM users WHERE user_id = ?",
+            [user_id]
+        );
+        const userData = rows as Omit<User, 'password'>[];
 
-export const getLottoPrizeByUid_api = async (req: Request, res: Response) => {
-  const uid = Number(req.query.idx);
+        if (userData.length === 0) {
+            return res.status(404).json({ message: "User not found." });
+        }
+        
+        res.status(200).json(userData[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error." });
+    }
+};
+import { OkPacket, RowDataPacket } from 'mysql2'; // ต้องเพิ่ม Type นี้หากยังไม่มี
 
-  try {
-    const data = await getLottoPrizeByUid_fn(uid);
-    res.status(200).json({ data });
-  } catch (error) {
-    res.status(404).json({ msg: "user not found" });
-  }
+/**
+ * @route GET /api/users
+ * @desc ดึงข้อมูลผู้ใช้ทั้งหมด (เหมาะสำหรับ Admin/ทดสอบ)
+ */
+export const getAllUsers_api = async (req: Request, res: Response) => {
+    try {
+        // 📌 ใช้ RowDataPacket[] เพื่อให้ TypeScript รู้ว่า 'rows' เป็น Array ของข้อมูล
+        const [rows] = await dbcon.query<RowDataPacket[]>(
+            "SELECT user_id, username, email, image, wallet, role FROM users"
+        );
+        
+        // rows.length จะถูกยอมรับ
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "No users found." });
+        }
+        
+        res.status(200).json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error during fetching all users." });
+    }
 };
