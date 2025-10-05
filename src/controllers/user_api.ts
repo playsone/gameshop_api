@@ -66,23 +66,44 @@ export const login_api = async (req: Request, res: Response) => {
 // 💡 Note: สำหรับการอัปโหลดไฟล์จริง ต้องใช้ middleware เช่น multer
 export const updateUser_api = async (req: Request, res: Response) => {
     const user_id = Number(req.params.user_id);
-    // 💡 สมมติว่าไฟล์ถูกจัดการและส่ง path/URL ของ image มาใน req.body
-    const { username, email, image } = req.body; 
-    
-    try {
-        const [results] = await dbcon.query<OkPacket>(
-            "UPDATE users SET username = ?, email = ?, image = ? WHERE user_id = ?",
-            [username, email, image || null, user_id]
-        );
+    const { email, password, image } = req.body;
 
-        if (results.affectedRows === 0) return res.status(404).json({ message: "User not found or no changes made." });
-        
+    try {
+        // ตรวจสอบ email ซ้ำ
+        const { isDuplicate } = await getUsersByEmail_fn(email);
+        if (isDuplicate) return res.status(409).json({ message: "Email is already registered." });
+
+        // hash password ถ้ามี
+        let passwordHash: string | null = null;
+        if (password) {
+            passwordHash = await bcrypt.hash(password, 10);
+        }
+
+        // SQL query สำหรับ update
+        let sql = "UPDATE users SET email = ?, image = ?";
+        const params: (string | null)[] = [email, image || null];
+        if (passwordHash) {
+            sql += ", password = ?";
+            params.push(passwordHash);
+        }
+        sql += " WHERE user_id = ?";
+        params.push(user_id);
+
+        // run query
+        const [results] = await dbcon.query<OkPacket>(sql, params);
+
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ message: "User not found or no changes made." });
+        }
+
         return res.status(200).json({ message: "User information updated successfully." });
+
     } catch (err: any) {
-        console.error(err);
-        res.status(500).json({ message: "Server error during update (e.g., username/email duplicate).", error: err.message });
+        console.error("Update User Error:", err);
+        res.status(500).json({ message: "Server error during update.", error: err.message });
     }
 };
+
 
 // --- 1.2, 1.3 ดูข้อมูลผู้ใช้ ---
 export const getUserProfile_api = async (req: Request, res: Response) => {
