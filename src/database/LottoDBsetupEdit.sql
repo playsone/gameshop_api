@@ -18,7 +18,7 @@ CREATE TABLE users (
     email VARCHAR(150) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     image VARCHAR(255),
-    wallet DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    wallet int defeat 0,
     role TINYINT(1) NOT NULL DEFAULT 0   -- 0 = USER, 1 = ADMIN
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
