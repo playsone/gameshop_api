@@ -66,23 +66,66 @@ export const login_api = async (req: Request, res: Response) => {
 // 💡 Note: สำหรับการอัปโหลดไฟล์จริง ต้องใช้ middleware เช่น multer
 export const updateUser_api = async (req: Request, res: Response) => {
     const user_id = Number(req.params.user_id);
-    // 💡 สมมติว่าไฟล์ถูกจัดการและส่ง path/URL ของ image มาใน req.body
-    const { username, email, image } = req.body; 
-    
-    try {
-        const [results] = await dbcon.query<OkPacket>(
-            "UPDATE users SET username = ?, email = ?, image = ? WHERE user_id = ?",
-            [username, email, image || null, user_id]
-        );
+    const { email, password, image } = req.body;
 
-        if (results.affectedRows === 0) return res.status(404).json({ message: "User not found or no changes made." });
-        
+    try {
+        // 1️⃣ ตรวจสอบว่า user มีอยู่จริง
+        const [existingUser] = await dbcon.query(
+            "SELECT * FROM users WHERE user_id = ?",
+            [user_id]
+        );
+        if ((existingUser as any[]).length === 0) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        // 2️⃣ ตรวจสอบ email ซ้ำ แต่ไม่รวมตัวเอง
+        if (email) {
+            const [rows] = await dbcon.query(
+                "SELECT user_id FROM users WHERE email = ? AND user_id != ?",
+                [email, user_id]
+            );
+            if ((rows as any[]).length > 0) {
+                return res.status(409).json({ message: "Email is already registered." });
+            }
+        }
+
+        // 3️⃣ hash password ถ้ามี
+        let passwordHash: string | null = null;
+        if (password) {
+            passwordHash = await bcrypt.hash(password, 10);
+        }
+
+        // 4️⃣ SQL query dynamic
+        const fields: string[] = [];
+        const values: (string | number | null)[] = [];
+
+        if (email) { fields.push("email = ?"); values.push(email); }
+        if (passwordHash) { fields.push("password = ?"); values.push(passwordHash); }
+        if (image !== undefined) { fields.push("image = ?"); values.push(image); }
+
+        if (fields.length === 0) {
+            return res.status(400).json({ message: "No fields to update." });
+        }
+
+        const sql = `UPDATE users SET ${fields.join(", ")} WHERE user_id = ?`;
+        values.push(user_id);
+
+        // 5️⃣ run query
+        const [results] = await dbcon.query<OkPacket>(sql, values);
+
+        if (results.affectedRows === 0) {
+            return res.status(400).json({ message: "No changes made." });
+        }
+
         return res.status(200).json({ message: "User information updated successfully." });
+
     } catch (err: any) {
-        console.error(err);
-        res.status(500).json({ message: "Server error during update (e.g., username/email duplicate).", error: err.message });
+        console.error("Update User Error:", err);
+        res.status(500).json({ message: "Server error during update.", error: err.message });
     }
 };
+
+
 
 // --- 1.2, 1.3 ดูข้อมูลผู้ใช้ ---
 export const getUserProfile_api = async (req: Request, res: Response) => {

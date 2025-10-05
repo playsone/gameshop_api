@@ -10,16 +10,30 @@ import { OkPacket, RowDataPacket } from 'mysql2';
  * @desc Admin จัดการเกม (CRUD) - Insert Game
  */
 export const createGame_api = async (req: Request, res: Response) => {
-    const { name, price, release_date, description, image, type_id } = req.body;
+    // 💡 ปรับปรุง: ไม่รับ release_date จาก req.body เพราะจะใช้ NOW() แทน
+    const { name, price, description, image, type_id } = req.body; 
+
+    // ✅ การตรวจสอบความถูกต้องของข้อมูล (Validation) เพื่อป้องกัน 500
+    if (!name || !price || !type_id) {
+        return res.status(400).json({ message: "Missing required fields: name, price, and type_id are mandatory." });
+    }
+    const numPrice = Number(price);
+    const numTypeId = Number(type_id);
+    if (isNaN(numPrice) || isNaN(numTypeId) || numPrice < 0) {
+        return res.status(400).json({ message: "Price and Type ID must be valid non-negative numbers." });
+    }
+
     try {
         const [results] = await dbcon.query<OkPacket>(
-            "INSERT INTO game(name, price, release_date, description, image, type_id) VALUES (?, ?, ?, ?, ?, ?)",
-            [name, price, release_date || null, description || null, image || null, type_id]
+            // ✅ ใช้ NOW() ใน SQL แทนค่าที่ส่งมา
+            "INSERT INTO game(name, price, release_date, description, image, type_id) VALUES (?, ?, NOW(), ?, ?, ?)",
+            [name, numPrice, description || null, image || null, numTypeId]
         );
         
         return res.status(201).json({ message: "Game created successfully.", game_id: results.insertId });
     } catch (err: any) {
         console.error(err);
+        // ข้อผิดพลาดที่เกิดจากการเชื่อมโยงคีย์ (Foreign Key) จะมาที่นี่
         res.status(500).json({ message: "Server error during game creation.", error: err.message });
     }
 };
@@ -30,11 +44,20 @@ export const createGame_api = async (req: Request, res: Response) => {
  */
 export const updateGame_api = async (req: Request, res: Response) => {
     const game_id = Number(req.params.game_id);
-    const { name, price, release_date, description, image, type_id } = req.body;
+    // 💡 ปรับปรุง: ไม่รับ release_date จาก req.body เพราะจะใช้ NOW() แทน
+    const { name, price, description, image, type_id } = req.body; 
+
+    // ✅ การตรวจสอบ game_id
+    if (isNaN(game_id) || game_id <= 0) {
+        return res.status(400).json({ message: "Invalid Game ID in request parameters." });
+    }
+    // (ควรมีการตรวจสอบ name, price, type_id เพิ่มเติมที่นี่ด้วย)
+
     try {
         const [results] = await dbcon.query<OkPacket>(
-            "UPDATE game SET name = ?, price = ?, release_date = ?, description = ?, image = ?, type_id = ? WHERE game_id = ?",
-            [name, price, release_date || null, description || null, image || null, type_id, game_id]
+            // ✅ กำหนด release_date = NOW() เพื่ออัปเดตเวลาปัจจุบัน
+            "UPDATE game SET name = ?, price = ?, release_date = NOW(), description = ?, image = ?, type_id = ? WHERE game_id = ?",
+            [name, price, description || null, image || null, Number(type_id), game_id]
         );
 
         if (results.affectedRows === 0) {
@@ -54,6 +77,9 @@ export const updateGame_api = async (req: Request, res: Response) => {
  */
 export const deleteGame_api = async (req: Request, res: Response) => {
     const game_id = Number(req.params.game_id);
+    if (isNaN(game_id) || game_id <= 0) {
+        return res.status(400).json({ message: "Invalid Game ID." });
+    }
     try {
         const [results] = await dbcon.query<OkPacket>("DELETE FROM game WHERE game_id = ?", [game_id]);
         
@@ -76,6 +102,12 @@ export const deleteGame_api = async (req: Request, res: Response) => {
  */
 export const createGameType_api = async (req: Request, res: Response) => {
     const { typename } = req.body;
+    
+    // ✅ การตรวจสอบความถูกต้องของข้อมูล (Validation)
+    if (!typename || typeof typename !== 'string' || typename.trim() === '') {
+        return res.status(400).json({ message: "Game type name (typename) is required." });
+    }
+    
     try {
         const [results] = await dbcon.query<OkPacket>(
             "INSERT INTO gametype(typename) VALUES (?)",
@@ -98,10 +130,10 @@ export const getLatestGames_api = async (req: Request, res: Response) => {
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
             `SELECT g.game_id, g.name, g.price, g.release_date, g.description, g.image, t.typename AS type
-            FROM game g
-            JOIN gametype t ON g.type_id = t.type_id
-            ORDER BY g.release_date DESC
-            LIMIT 10`
+             FROM game g
+             JOIN gametype t ON g.type_id = t.type_id
+             ORDER BY g.release_date DESC
+             LIMIT 10`
         );
         res.status(200).json(rows);
     } catch (err) {
@@ -172,12 +204,15 @@ export const searchGames_api = async (req: Request, res: Response) => {
  */
 export const getGameDetails_api = async (req: Request, res: Response) => {
     const game_id = Number(req.params.game_id);
+    if (isNaN(game_id) || game_id <= 0) {
+        return res.status(400).json({ message: "Invalid Game ID." });
+    }
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
             `SELECT g.game_id, g.name, g.price, g.release_date, g.description, g.image, t.typename AS type
-            FROM game g
-            JOIN gametype t ON g.type_id = t.type_id
-            WHERE g.game_id = ?`,
+             FROM game g
+             JOIN gametype t ON g.type_id = t.type_id
+             WHERE g.game_id = ?`,
             [game_id]
         );
         
@@ -226,6 +261,10 @@ export const getTopSellerGames_api = async (req: Request, res: Response) => {
 export const addToBasket_api = async (req: Request, res: Response) => {
     const uid = Number(req.params.user_id);
     const game_id = Number(req.params.game_id);
+    
+    if (isNaN(uid) || uid <= 0 || isNaN(game_id) || game_id <= 0) {
+        return res.status(400).json({ message: "Invalid User ID or Game ID." });
+    }
 
     try {
         const [libraryCheck] = await dbcon.query<RowDataPacket[]>(
@@ -262,12 +301,15 @@ export const addToBasket_api = async (req: Request, res: Response) => {
  */
 export const getBasket_api = async (req: Request, res: Response) => {
     const uid = Number(req.params.user_id);
+    if (isNaN(uid) || uid <= 0) {
+        return res.status(400).json({ message: "Invalid User ID." });
+    }
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
             `SELECT b.bid, g.game_id, g.name, g.price
-            FROM basket b
-            JOIN game g ON b.game_id = g.game_id
-            WHERE b.uid = ?`,
+             FROM basket b
+             JOIN game g ON b.game_id = g.game_id
+             WHERE b.uid = ?`,
             [uid]
         );
         
@@ -285,6 +327,10 @@ export const getBasket_api = async (req: Request, res: Response) => {
 export const removeFromBasket_api = async (req: Request, res: Response) => {
     const user_id = Number(req.params.user_id);
     const bid = Number(req.params.bid);
+    
+    if (isNaN(user_id) || user_id <= 0 || isNaN(bid) || bid <= 0) {
+        return res.status(400).json({ message: "Invalid User ID or Basket ID." });
+    }
     
     try {
         const [results] = await dbcon.query<OkPacket>(
@@ -311,13 +357,16 @@ export const removeFromBasket_api = async (req: Request, res: Response) => {
  */
 export const getUserGameLibrary_api = async (req: Request, res: Response) => {
     const user_id = Number(req.params.user_id);
+    if (isNaN(user_id) || user_id <= 0) {
+        return res.status(400).json({ message: "Invalid User ID." });
+    }
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
             `SELECT g.game_id, g.name, g.price, g.image, g.release_date
-            FROM usersgamelibrary u
-            JOIN game g ON u.game_id = g.game_id
-            WHERE u.user_id = ?
-            ORDER BY u.purchase_date DESC`,
+             FROM usersgamelibrary u
+             JOIN game g ON u.game_id = g.game_id
+             WHERE u.user_id = ?
+             ORDER BY u.purchase_date DESC`,
             [user_id]
         );
         
@@ -350,10 +399,19 @@ export const getAllDiscountCodes_api = async (req: Request, res: Response) => {
  */
 export const createDiscountCode_api = async (req: Request, res: Response) => {
     const { code_name, discount_value, max_user } = req.body;
+    
+    // ✅ การตรวจสอบความถูกต้องของข้อมูล (Validation)
+    if (!code_name || isNaN(Number(discount_value)) || isNaN(Number(max_user)) || Number(discount_value) <= 0 || Number(max_user) <= 0) {
+         return res.status(400).json({ message: "Missing required fields or invalid number values (must be positive)." });
+    }
+    
+    const value = Number(discount_value);
+    const remaining_user = Number(max_user);
+    
     try {
         const [results] = await dbcon.query<OkPacket>(
             "INSERT INTO discountcode(code_name, discount_value, remaining_user, max_user) VALUES (?, ?, ?, ?)",
-            [code_name, discount_value, max_user, max_user]
+            [code_name, value, remaining_user, max_user]
         );
         
         if (results.affectedRows > 0) {
@@ -372,6 +430,9 @@ export const createDiscountCode_api = async (req: Request, res: Response) => {
  */
 export const deleteDiscountCode_api = async (req: Request, res: Response) => {
     const code_id = Number(req.params.code_id);
+    if (isNaN(code_id) || code_id <= 0) {
+        return res.status(400).json({ message: "Invalid Code ID." });
+    }
     try {
         const [results] = await dbcon.query<OkPacket>("DELETE FROM discountcode WHERE code_id = ?", [code_id]);
 
@@ -384,7 +445,6 @@ export const deleteDiscountCode_api = async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ message: "Server error." });
     }
-    
 };
 
 // --- 2.3 ดึงประเภทเกมทั้งหมด (NEW) ---
@@ -403,9 +463,9 @@ export const getAllGames_api = async (req: Request, res: Response) => {
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
             `SELECT g.game_id, g.name, g.price, g.release_date, g.image, t.typename AS type
-            FROM game g
-            JOIN gametype t ON g.type_id = t.type_id
-            ORDER BY g.game_id DESC`
+             FROM game g
+             JOIN gametype t ON g.type_id = t.type_id
+             ORDER BY g.game_id DESC`
         );
         res.status(200).json(rows);
     } catch (err) {
@@ -414,15 +474,12 @@ export const getAllGames_api = async (req: Request, res: Response) => {
     }
 };
 
-// ... (Store Views เดิม: getLatestGames_api, searchGames_api, getGameDetails_api, getTopSellerGames_api) ...
-// ... (Basket Management เดิม: addToBasket_api, getBasket_api, removeFromBasket_api) ...
-// ... (Library เดิม: getUserGameLibrary_api) ...
-
 // --- 4.2, 5.3 User ใช้โค้ดส่วนลดในตะกร้า (NEW) ---
 export const applyDiscount_api = async (req: Request, res: Response) => {
     const uid = Number(req.params.user_id);
     const { code_name } = req.body;
     
+    if (isNaN(uid) || uid <= 0) return res.status(400).json({ message: "Invalid User ID." });
     if (!code_name) return res.status(400).json({ message: "Discount code is required." });
 
     try {
@@ -446,6 +503,7 @@ export const applyDiscount_api = async (req: Request, res: Response) => {
 
         // 3. ตรวจสอบการใช้ซ้ำ (5.3: 1 ครั้ง/บัญชี)
         const [usageCheck] = await dbcon.query<RowDataPacket[]>(
+            // 💡 แก้ไข: ควรตรวจสอบจากตาราง Transaction ว่ามีการใช้ code_id นี้แล้วหรือไม่
             "SELECT transaction_id FROM gametransaction WHERE user_id = ? AND code_id = ?",
             [uid, discountCode.code_id]
         );
