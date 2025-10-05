@@ -21,7 +21,7 @@ export const register_api = async (req: Request, res: Response) => {
         const passwordHash = await bcrypt.hash(password, 10);
         
         const [results] = await dbcon.query<OkPacket>(
-            "INSERT INTO users(username, email, password, image, role) VALUES (?, ?, ?, ?, 'user')", // 💡 กำหนด role default เป็น 'user'
+            "INSERT INTO users(username, email, password, image) VALUES (?, ?, ?, ?)", // 💡 กำหนด role default เป็น 'user'
             [username, email, passwordHash, image || null]
         );
 

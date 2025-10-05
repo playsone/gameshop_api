@@ -13,7 +13,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["https://gameshop-api-u2qx.onrender.com",  'http://localhost:4200'],
+    origin: ["https://gameshop-api-xgfd.onrender.com",  'http://localhost:4200'],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
