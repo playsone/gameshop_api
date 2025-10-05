@@ -6,7 +6,10 @@ import {
     register_api, login_api, updateUser_api, getUserProfile_api,
     getAllUsers_api, 
     // 💡 NEW: เพิ่มฟังก์ชันที่ขาดหายไปใน USER/SYSTEM
-    getUsersById_api, getUserByEmail_api, reset_api, setupDB_api
+    getUsersById_api, getUserByEmail_api, 
+    // ✅ NEW: เพิ่ม getUserByUsername_api ที่เราสร้างขึ้น
+    getUserByUsername_api, 
+    reset_api, setupDB_api
 } from "../controllers/user_api";
 
 import {
@@ -37,8 +40,9 @@ router.post("/auth/login", login_api);
 
 // USER MANAGEMENT (Admin/User)
 router.get("/users", getAllUsers_api); 
-router.get("/users/by-email/:email", getUserByEmail_api); // 💡 NEW: ดึงข้อมูลผู้ใช้ด้วย Email (Route ปลอดภัย)
-router.get("/users/:user_id", getUsersById_api); // 💡 NEW: ดึงข้อมูลผู้ใช้ด้วย ID (ใช้ Utility)
+router.get("/users/by-email/:email", getUserByEmail_api); // 💡 NEW: ดึงข้อมูลผู้ใช้ด้วย Email
+router.get("/users/by-username/:username", getUserByUsername_api); // ✅ NEW: ดึงข้อมูลผู้ใช้ด้วย Username (ตามที่ร้องขอ)
+router.get("/users/:user_id", getUsersById_api); // 💡 NEW: ดึงข้อมูลผู้ใช้ด้วย ID
 
 // USER PROFILE
 router.get("/users/:user_id/profile", getUserProfile_api);
@@ -70,7 +74,7 @@ router.get("/gametypes", getAllGameTypes_api); // 💡 NEW: ดึงราย�
 
 router.get("/games/latest", getLatestGames_api);
 router.get("/games/top-sellers", getTopSellerGames_api);
-router.get("/games/search", searchGames_api);
+router.get("/games/search", searchGames_api); // ✅ EDITED: รองรับการค้นหาด้วยชื่อ (%a%) และกรองด้วย type_id
 router.get("/games/:game_id", getGameDetails_api);
 
 // USER LIBRARY & BASKET
@@ -85,7 +89,7 @@ router.delete("/users/:user_id/basket/:bid", removeFromBasket_api);
 // =======================================================
 
 // --- Transaction Admin ---
-router.get("/admin/transactions", getAdminTransactionHistory_api); // 💡 NEW: ดูประวัติธุรกรรมรวมของทุก User (เกณฑ์ 3.4)
+router.get("/admin/transactions", getAdminTransactionHistory_api); // 💡 NEW: ดูประวัติธุรกรรมรวมของทุก User
 
 // --- Game Management ---
 router.get("/admin/games", getAllGames_api); // 💡 NEW: ดึงรายการเกมทั้งหมด (Admin View)
