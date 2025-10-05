@@ -148,6 +148,27 @@ export const getUserByEmail_api = async (req: Request, res: Response) => {
     }
 };
 
+// --- NEW: ดึงข้อมูลผู้ใช้ด้วย Username (ตามที่ร้องขอ) ---
+/**
+ * @route GET /api/users/username/:username
+ * @desc ดึงข้อมูลผู้ใช้ด้วย Username
+ */
+export const getUserByUsername_api = async (req: Request, res: Response) => {
+    const username = req.params.username as string;
+    try {
+        const { user: userData } = await getUsersByUsername_fn(username); 
+        
+        if (!userData) return res.status(404).json({ message: "User not found." });
+        
+        const { password, ...safeData } = userData; 
+        res.status(200).json(safeData);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error." });
+    }
+};
+
+
 // --- System Management (สำหรับ Admin) ---
 
 // 💡 NEW: ฟังก์ชัน Reset Database

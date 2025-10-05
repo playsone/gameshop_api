@@ -110,31 +110,59 @@ export const getLatestGames_api = async (req: Request, res: Response) => {
     }
 };
 
+// --- NEW: API ค้นหาเกมตามชื่อและชนิดที่ปรับปรุงแล้ว ---
 /**
  * @route GET /api/games/search
- * @desc ค้นหาเกม (ชื่อ/ประเภท)
+ * @desc ค้นหาเกม (ชื่อ) และ/หรือ กรองตามประเภท
+ * @queryParam q (string, optional): ชื่อเกมที่ต้องการค้นหา (LIKE %a%)
+ * @queryParam type_id (number, optional): ID ของประเภทเกมที่ต้องการกรอง
  */
 export const searchGames_api = async (req: Request, res: Response) => {
+    // ดึงค่าจาก query parameters
     const search_term = (req.query.q as string)?.trim() || '';
-    if (!search_term) {
-        return res.status(400).json({ message: "Search query 'q' is required." });
+    const type_id = (req.query.type_id as string)?.trim();
+
+    let sql = `
+        SELECT g.game_id, g.name, g.price, g.image, t.typename AS type
+        FROM game g
+        JOIN gametype t ON g.type_id = t.type_id
+    `;
+    const params: (string | number)[] = [];
+    const whereConditions: string[] = [];
+
+    // 1. เงื่อนไขค้นหาชื่อเกม (LIKE %q%)
+    if (search_term) {
+        const wildcard_term = `%${search_term}%`;
+        whereConditions.push(`g.name LIKE ?`);
+        params.push(wildcard_term);
     }
     
-    const wildcard_term = `%${search_term}%`;
-
+    // 2. เงื่อนไขกรองตามชนิดเกม (g.type_id = ?)
+    if (type_id && !isNaN(Number(type_id))) {
+        whereConditions.push(`g.type_id = ?`);
+        params.push(Number(type_id));
+    }
+    
+    // สร้าง WHERE clause (ถ้ามีเงื่อนไข)
+    if (whereConditions.length > 0) {
+        sql += ` WHERE ` + whereConditions.join(' AND ');
+    }
+    
+    // จัดเรียงผลลัพธ์
+    sql += ` ORDER BY g.name ASC`;
+    
     try {
-        const [rows] = await dbcon.query<RowDataPacket[]>(
-            `SELECT g.game_id, g.name, g.price, g.image, t.typename AS type
-            FROM game g
-            JOIN gametype t ON g.type_id = t.type_id
-            WHERE g.name LIKE ?
-            OR t.typename LIKE ?`,
-            [wildcard_term, wildcard_term]
-        );
+        const [rows] = await dbcon.query<RowDataPacket[]>(sql, params);
+        
+        // ถ้าไม่มีการค้นหาและไม่มีการกรอง และไม่พบอะไรเลย ให้ส่ง 404
+        if (rows.length === 0 && (search_term || type_id)) {
+            return res.status(404).json({ message: "No games found matching the criteria." });
+        }
+        
         res.status(200).json(rows);
-    } catch (err) {
+    } catch (err: any) {
         console.error(err);
-        res.status(500).json({ message: "Server error." });
+        res.status(500).json({ message: "Server error during game search.", error: err.message });
     }
 };
 
