@@ -199,12 +199,15 @@ export const getGameDetails_api = async (req: Request, res: Response) => {
 export const getTopSellerGames_api = async (req: Request, res: Response) => {
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
-            `SELECT g.game_id, g.name, COUNT(*) AS total_sold
-            FROM gametransaction gt
-            JOIN game g ON gt.game_id = g.game_id
-            GROUP BY gt.game_id, g.name
-            ORDER BY total_sold DESC
-            LIMIT 5`
+            `SELECT g.game_id, g.name, g.price, g.release_date, g.description, g.image, t.typename AS type,
+                    COUNT(gt.game_id) AS total_sold
+             FROM gametransaction gt
+             JOIN game g ON gt.game_id = g.game_id
+             JOIN gametype t ON g.type_id = t.type_id
+             GROUP BY g.game_id, g.name, g.price, g.release_date, g.description, g.image, t.typename
+             HAVING COUNT(gt.game_id) > 0
+             ORDER BY total_sold DESC
+             LIMIT 5`
         );
         res.status(200).json(rows);
     } catch (err) {
@@ -212,6 +215,7 @@ export const getTopSellerGames_api = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Server error." });
     }
 };
+
 
 // --- Basket Management (สำหรับ User) ---
 
