@@ -290,7 +290,7 @@ export const getTopSellerGames_api = async (req: Request, res: Response) => {
             FROM game g
             JOIN gametype gt ON g.type_id = gt.type_id
             JOIN gametransactionitem gi ON g.game_id = gi.game_id 
-            GROUP BY g.game_id, g.name, g.price, g.description, g.image, g.release_date, gt.type_name
+            GROUP BY g.game_id, g.name, g.price, g.description, g.image, g.release_date, gt.typename
             ORDER BY total_sales DESC
             LIMIT 5;
         `;
