@@ -276,7 +276,6 @@ export const getLatestGames_api = async (req: Request, res: Response) => {
  */
 export const getTopSellerGames_api = async (req: Request, res: Response) => {
     try {
-        // 1. Query เพื่อหา 5 อันดับเกมที่มีการซื้อมากที่สุด (นับจากจำนวนรายการใน Transaction)
         const sql = `
             SELECT 
                 g.game_id, 
@@ -286,26 +285,24 @@ export const getTopSellerGames_api = async (req: Request, res: Response) => {
                 g.image, 
                 g.release_date, 
                 gt.typename, 
-                COUNT(gi.game_id) AS total_sales
+                COALESCE(COUNT(gi.game_id), 0) AS total_sales
             FROM game g
             JOIN gametype gt ON g.type_id = gt.type_id
-            JOIN gametransactionitem gi ON g.game_id = gi.game_id 
+            LEFT JOIN gametransactionitem gi ON g.game_id = gi.game_id
             GROUP BY g.game_id, g.name, g.price, g.description, g.image, g.release_date, gt.typename
             ORDER BY total_sales DESC
             LIMIT 5;
         `;
-        
-        const [games] = await dbcon.query<RowDataPacket[]>(sql);
 
-        // 2. คืนค่ารายการเกมที่พบ
+        const [games] = await dbcon.query<RowDataPacket[]>(sql);
         return res.status(200).json(games);
 
     } catch (error) {
         console.error("Database error in getTopSellerGames_api:", error);
-        // ❌ หากเกิดข้อผิดพลาดในการ Query ให้คืนค่า 500
         return res.status(500).json({ message: "Failed to fetch top seller games due to a server error." });
     }
 };
+
 
 /**
  * @route GET /api/games/search
