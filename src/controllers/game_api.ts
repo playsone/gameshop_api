@@ -19,8 +19,8 @@ export const createGame_api = async (req: Request, res: Response) => {
     }
     const numPrice = Number(price);
     const numTypeId = Number(type_id);
-    if (isNaN(numPrice) || isNaN(numTypeId) || numPrice < 0) {
-        return res.status(400).json({ message: "Price and Type ID must be valid non-negative numbers." });
+    if (isNaN(numPrice) || isNaN(numTypeId) || numPrice < 0 || numTypeId <= 0) { // เพิ่ม numTypeId <= 0
+        return res.status(400).json({ message: "Price must be non-negative, and Type ID must be a valid positive number." });
     }
 
     try {
@@ -50,13 +50,21 @@ export const updateGame_api = async (req: Request, res: Response) => {
     if (isNaN(game_id) || game_id <= 0) {
         return res.status(400).json({ message: "Invalid Game ID in request parameters." });
     }
-    // (ควรมีการตรวจสอบ name, price, type_id เพิ่มเติมที่นี่ด้วย)
+
+    // ✅ NEW: การตรวจสอบความถูกต้องของข้อมูล (Validation) สำหรับการ Update
+    const numPrice = Number(price);
+    const numTypeId = Number(type_id);
+
+    if (!name || isNaN(numPrice) || numPrice < 0 || isNaN(numTypeId) || numTypeId <= 0) {
+        return res.status(400).json({ message: "Invalid fields: name, price (>= 0), and a valid type_id are mandatory for update." });
+    }
+    // End NEW Validation
 
     try {
         const [results] = await dbcon.query<OkPacket>(
             // ✅ กำหนด release_date = NOW() เพื่ออัปเดตเวลาปัจจุบัน
             "UPDATE game SET name = ?, price = ?, release_date = NOW(), description = ?, image = ?, type_id = ? WHERE game_id = ?",
-            [name, price, description || null, image || null, Number(type_id), game_id]
+            [name, numPrice, description || null, image || null, numTypeId, game_id] // ใช้ numPrice และ numTypeId ที่แปลงแล้ว
         );
 
         if (results.affectedRows === 0) {
@@ -329,7 +337,7 @@ export const getBasket_api = async (req: Request, res: Response) => {
     }
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
-            `SELECT b.bid, g.game_id, g.name, g.price
+            `SELECT b.bid, g.game_id, g.name AS game_name, g.price, g.image
              FROM basket b
              JOIN game g ON b.game_id = g.game_id
              WHERE b.uid = ?`,
@@ -526,7 +534,7 @@ export const applyDiscount_api = async (req: Request, res: Response) => {
 
         // 3. ตรวจสอบการใช้ซ้ำ (5.3: 1 ครั้ง/บัญชี)
         const [usageCheck] = await dbcon.query<RowDataPacket[]>(
-            // 💡 แก้ไข: ควรตรวจสอบจากตาราง Transaction ว่ามีการใช้ code_id นี้แล้วหรือไม่
+            // ตรวจสอบจากตาราง Transaction ว่ามีการใช้ code_id นี้แล้วหรือไม่
             "SELECT transaction_id FROM gametransaction WHERE user_id = ? AND code_id = ?",
             [uid, discountCode.code_id]
         );
