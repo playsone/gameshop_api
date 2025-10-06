@@ -285,7 +285,7 @@ export const getTopSellerGames_api = async (req: Request, res: Response) => {
                 g.description, 
                 g.image, 
                 g.release_date, 
-                gt.type_name, 
+                gt.typename, 
                 COUNT(gi.game_id) AS total_sales
             FROM game g
             JOIN gametype gt ON g.type_id = gt.type_id
