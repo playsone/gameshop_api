@@ -26,17 +26,16 @@ export const createGame_api = async (req: Request, res: Response) => {
     try {
         const [results] = await dbcon.query<OkPacket>(
             // ✅ ใช้ NOW() ใน SQL แทนค่าที่ส่งมา
-            "INSERT INTO game(name, price, release_date, description, image, type_id) VALUES (?, ?, NOW(), ?, ?, ?)",
-            [name, numPrice, description || null, image || null, numTypeId]
+            "INSERT INTO game(name, price, release_date, description, image, type_id) VALUES(?, ?, NOW(), ?, ?, ?)",
+            [name, numPrice, description, image, numTypeId]
         );
-        
-        return res.status(201).json({ message: "Game created successfully.", game_id: results.insertId });
-    } catch (err: any) {
-        console.error(err);
-        // ข้อผิดพลาดที่เกิดจากการเชื่อมโยงคีย์ (Foreign Key) จะมาที่นี่
-        res.status(500).json({ message: "Server error during game creation.", error: err.message });
+        return res.status(201).json({ message: "Game created successfully", game_id: results.insertId });
+    } catch (error) {
+        console.error("Database error in createGame_api:", error);
+        return res.status(500).json({ message: "Error creating game." });
     }
 };
+
 
 /**
  * @route PUT /api/admin/games/:game_id
@@ -200,32 +199,56 @@ export const searchGames_api = async (req: Request, res: Response) => {
 
 /**
  * @route GET /api/games/:game_id
- * @desc ดูรายละเอียดเกม
+ * @desc ดึงรายละเอียดเกมเดี่ยว
+ * 💡 แก้ไข: ทำการ JOIN กับ gametype เพื่อดึง type_id และ typename
  */
 export const getGameDetails_api = async (req: Request, res: Response) => {
-    const game_id = Number(req.params.game_id);
-    if (isNaN(game_id) || game_id <= 0) {
-        return res.status(400).json({ message: "Invalid Game ID." });
+    const { game_id } = req.params;
+    if (!game_id) {
+        return res.status(400).json({ message: "Game ID is required." });
     }
+
     try {
+        // ✅ FIX: SELECT type_id และใช้ JOIN เพื่อดึง typename
         const [rows] = await dbcon.query<RowDataPacket[]>(
-            `SELECT g.game_id, g.name, g.price, g.release_date, g.description, g.image, t.typename AS type
+            `SELECT 
+                g.game_id, 
+                g.name, 
+                g.price, 
+                g.release_date, 
+                g.description, 
+                g.image, 
+                g.type_id, 
+                gt.typename AS type 
              FROM game g
-             JOIN gametype t ON g.type_id = t.type_id
+             JOIN gametype gt ON g.type_id = gt.type_id
              WHERE g.game_id = ?`,
             [game_id]
         );
-        
+
         if (rows.length === 0) {
             return res.status(404).json({ message: "Game not found." });
         }
+
+        const gameData = rows[0]; 
         
-        res.status(200).json(rows[0]);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error." });
+        // แปลง Date เป็น ISO String 
+        if (gameData.release_date instanceof Date) {
+             gameData.release_date = gameData.release_date.toISOString();
+        }
+        // แปลง price ให้เป็น string ตามรูปแบบข้อมูลที่ client คาดหวัง
+        gameData.price = String(gameData.price); 
+
+        // 💡 ผลลัพธ์จะมีทั้ง game_id, name, price, description, image, type_id, และ type (typename)
+        return res.status(200).json(gameData);
+
+    } catch (error) {
+        console.error("Error fetching game details:", error);
+        return res.status(500).json({ message: "Internal server error." });
     }
 };
+
+
 
 /**
  * @route GET /api/games/top-sellers
