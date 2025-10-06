@@ -2,6 +2,7 @@
 import { Request, Response } from "express";
 import { dbcon } from "../database/pool";
 import { OkPacket, RowDataPacket } from 'mysql2';
+import { Console } from "console";
 
 // --- Game CRUD (สำหรับ Admin) ---
 
@@ -19,62 +20,59 @@ export const createGame_api = async (req: Request, res: Response) => {
     }
     const numPrice = Number(price);
     const numTypeId = Number(type_id);
-    if (isNaN(numPrice) || isNaN(numTypeId) || numPrice < 0 || numTypeId <= 0) { // เพิ่ม numTypeId <= 0
-        return res.status(400).json({ message: "Price must be non-negative, and Type ID must be a valid positive number." });
+    if (isNaN(numPrice) || isNaN(numTypeId) || numPrice < 0) {
+        return res.status(400).json({ message: "Price and Type ID must be valid non-negative numbers." });
     }
 
     try {
         const [results] = await dbcon.query<OkPacket>(
             // ✅ ใช้ NOW() ใน SQL แทนค่าที่ส่งมา
-            "INSERT INTO game(name, price, release_date, description, image, type_id) VALUES(?, ?, NOW(), ?, ?, ?)",
-            [name, numPrice, description, image, numTypeId]
+            "INSERT INTO game(name, price, release_date, description, image, type_id) VALUES (?, ?, NOW(), ?, ?, ?)",
+            [name, numPrice, description || null, image || null, numTypeId]
         );
-        return res.status(201).json({ message: "Game created successfully", game_id: results.insertId });
+        return res.status(201).json({ message: "Game created successfully.", game_id: results.insertId });
+
     } catch (error) {
-        console.error("Database error in createGame_api:", error);
-        return res.status(500).json({ message: "Error creating game." });
+        console.error("Error creating game:", error);
+        return res.status(500).json({ message: "Server error while creating game." });
     }
 };
-
 
 /**
  * @route PUT /api/admin/games/:game_id
  * @desc Admin จัดการเกม (CRUD) - Update Game
  */
 export const updateGame_api = async (req: Request, res: Response) => {
-    const game_id = Number(req.params.game_id);
-    // 💡 ปรับปรุง: ไม่รับ release_date จาก req.body เพราะจะใช้ NOW() แทน
-    const { name, price, description, image, type_id } = req.body; 
+    const game_id = req.params.game_id;
+    // 💡 ปรับปรุง: ไม่รับ release_date จาก req.body เพราะจะไม่อัปเดตฟิลด์นี้
+    const { name, price, description, image, type_id } = req.body;
 
-    // ✅ การตรวจสอบ game_id
-    if (isNaN(game_id) || game_id <= 0) {
-        return res.status(400).json({ message: "Invalid Game ID in request parameters." });
+    // ✅ การตรวจสอบความถูกต้องของข้อมูล (Validation)
+    if (!name || !price || !type_id) {
+        return res.status(400).json({ message: "Missing required fields for update: name, price, and type_id are mandatory." });
     }
-
-    // ✅ NEW: การตรวจสอบความถูกต้องของข้อมูล (Validation) สำหรับการ Update
     const numPrice = Number(price);
     const numTypeId = Number(type_id);
 
-    if (!name || isNaN(numPrice) || numPrice < 0 || isNaN(numTypeId) || numTypeId <= 0) {
-        return res.status(400).json({ message: "Invalid fields: name, price (>= 0), and a valid type_id are mandatory for update." });
+    if (isNaN(numPrice) || isNaN(numTypeId) || numPrice < 0) {
+        return res.status(400).json({ message: "Price and Type ID must be valid non-negative numbers." });
     }
-    // End NEW Validation
 
     try {
         const [results] = await dbcon.query<OkPacket>(
-            // ✅ กำหนด release_date = NOW() เพื่ออัปเดตเวลาปัจจุบัน
-            "UPDATE game SET name = ?, price = ?, release_date = NOW(), description = ?, image = ?, type_id = ? WHERE game_id = ?",
-            [name, numPrice, description || null, image || null, numTypeId, game_id] // ใช้ numPrice และ numTypeId ที่แปลงแล้ว
+            "UPDATE game SET name = ?, price = ?, description = ?, image = ?, type_id = ? WHERE game_id = ?",
+            [name, numPrice, description || null, image || null, numTypeId, game_id]
         );
 
         if (results.affectedRows === 0) {
             return res.status(404).json({ message: "Game not found or no changes made." });
         }
-        
+
         return res.status(200).json({ message: "Game updated successfully." });
-    } catch (err: any) {
-        console.error(err);
-        res.status(500).json({ message: "Server error during game update.", error: err.message });
+
+    } catch (error) {
+        console.error(`Error updating game ${game_id}:`, error);
+        return res.status(500).json({ message: "Server error while updating game." });
     }
 };
 
@@ -83,151 +81,265 @@ export const updateGame_api = async (req: Request, res: Response) => {
  * @desc Admin จัดการเกม (CRUD) - Delete Game
  */
 export const deleteGame_api = async (req: Request, res: Response) => {
-    const game_id = Number(req.params.game_id);
-    if (isNaN(game_id) || game_id <= 0) {
-        return res.status(400).json({ message: "Invalid Game ID." });
-    }
+    const game_id = req.params.game_id;
     try {
-        const [results] = await dbcon.query<OkPacket>("DELETE FROM game WHERE game_id = ?", [game_id]);
-        
+        const [results] = await dbcon.query<OkPacket>(
+            "DELETE FROM game WHERE game_id = ?",
+            [game_id]
+        );
         if (results.affectedRows === 0) {
             return res.status(404).json({ message: "Game not found." });
         }
-        
         return res.status(200).json({ message: "Game deleted successfully." });
-    } catch (err: any) {
-        console.error(err);
-        res.status(500).json({ message: "Server error during game deletion.", error: err.message });
+    } catch (error) {
+        console.error(`Error deleting game ${game_id}:`, error);
+        // ในระบบจริง ควรตรวจสอบ Error Code เพื่อจัดการ Foreign Key constraint
+        return res.status(500).json({ message: "Server error while deleting game." });
     }
 };
 
-// --- GameType CRUD (สำหรับ Admin) ---
+
+// --- Game Type Management (สำหรับ Admin) ---
 
 /**
  * @route POST /api/admin/gametypes
- * @desc Admin เพิ่มประเภทเกม
+ * @desc Admin จัดการประเภทเกม - Insert Game Type
  */
 export const createGameType_api = async (req: Request, res: Response) => {
     const { typename } = req.body;
-    
-    // ✅ การตรวจสอบความถูกต้องของข้อมูล (Validation)
-    if (!typename || typeof typename !== 'string' || typename.trim() === '') {
-        return res.status(400).json({ message: "Game type name (typename) is required." });
+
+    if (!typename) {
+        return res.status(400).json({ message: "Missing required field: typename is mandatory." });
     }
-    
+
     try {
+        // ตรวจสอบความซ้ำซ้อน
+        const [existing] = await dbcon.query<RowDataPacket[]>(
+            "SELECT type_id FROM gametype WHERE typename = ?",
+            [typename]
+        );
+        if (existing.length > 0) {
+            return res.status(409).json({ message: "Game type already exists." });
+        }
+
         const [results] = await dbcon.query<OkPacket>(
             "INSERT INTO gametype(typename) VALUES (?)",
             [typename]
         );
-        return res.status(201).json({ message: "Game type created.", type_id: results.insertId });
-    } catch (err: any) {
-        console.error(err);
-        res.status(500).json({ message: "Server error during type creation.", error: err.message });
+        return res.status(201).json({ message: "Game type created successfully.", type_id: results.insertId });
+
+    } catch (error) {
+        console.error("Error creating game type:", error);
+        return res.status(500).json({ message: "Server error while creating game type." });
     }
 };
 
-// --- Store Views (สำหรับ User) ---
+
+// --- Discount Management (สำหรับ Admin) ---
+
+/**
+ * @route POST /api/admin/discounts
+ * @desc Admin จัดการส่วนลด - สร้างโค้ดส่วนลดใหม่
+ * @body { code_name: string, discount_value: number, max_user: number }
+ */
+export const createDiscountCode_api = async (req: Request, res: Response) => {
+    const { code_name, discount_value, max_user } = req.body;
+
+    // 1. Validation
+    if (!code_name || discount_value === undefined || max_user === undefined) {
+        return res.status(400).json({ message: "Missing required fields: code_name, discount_value, and max_user are mandatory." });
+    }
+    const numDiscountValue = Number(discount_value);
+    const numMaxUser = Number(max_user);
+
+    // discount_value ต้องมากกว่า 0 (ส่วนลดต้องมีค่า), max_user ต้องมากกว่าหรือเท่ากับ 1
+    if (isNaN(numDiscountValue) || isNaN(numMaxUser) || numDiscountValue <= 0 || numMaxUser < 1) {
+        return res.status(400).json({ message: "Discount value must be a positive number, and Max User must be a positive integer." });
+    }
+
+    try {
+        // 2. Check for existing code name
+        const [existing] = await dbcon.query<RowDataPacket[]>(
+            "SELECT code_id FROM discountcode WHERE code_name = ?",
+            [code_name]
+        );
+        if (existing.length > 0) {
+            return res.status(409).json({ message: `Discount code '${code_name}' already exists.` });
+        }
+
+        // 3. Insert new code
+        // remaining_user เริ่มต้นเท่ากับ max_user
+        const [results] = await dbcon.query<OkPacket>(
+            "INSERT INTO discountcode(code_name, discount_value, max_user, remaining_user) VALUES (?, ?, ?, ?)",
+            [code_name, numDiscountValue, numMaxUser, numMaxUser]
+        );
+
+        return res.status(201).json({
+            message: "Discount code created successfully.",
+            code_id: results.insertId,
+            code_name,
+            discount_value: numDiscountValue,
+            max_user: numMaxUser
+        });
+
+    } catch (error) {
+        console.error("Error creating discount code:", error);
+        return res.status(500).json({ message: "Server error while creating discount code." });
+    }
+};
+
+/**
+ * @route GET /api/admin/discounts
+ * @desc Admin จัดการส่วนลด - ดึงโค้ดส่วนลดทั้งหมด
+ */
+export const getAllDiscountCodes_api = async (req: Request, res: Response) => {
+    try {
+        const [rows] = await dbcon.query<RowDataPacket[]>(
+            "SELECT code_id, code_name, discount_value, remaining_user, max_user FROM discountcode ORDER BY code_id DESC"
+        );
+        return res.status(200).json(rows);
+    } catch (error) {
+        console.error("Error fetching all discount codes:", error);
+        return res.status(500).json({ message: "Server error while fetching discount codes." });
+    }
+};
+
+/**
+ * @route DELETE /api/admin/discounts/:code_id
+ * @desc Admin จัดการส่วนลด - ลบโค้ดส่วนลด
+ */
+export const deleteDiscountCode_api = async (req: Request, res: Response) => {
+    const code_id = req.params.code_id;
+    try {
+        const [results] = await dbcon.query<OkPacket>(
+            "DELETE FROM discountcode WHERE code_id = ?",
+            [code_id]
+        );
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ message: "Discount code not found." });
+        }
+        return res.status(200).json({ message: "Discount code deleted successfully." });
+    } catch (error) {
+        console.error(`Error deleting discount code ${code_id}:`, error);
+        // ในระบบจริง ควรตรวจสอบ Error Code เพื่อจัดการ Foreign Key constraint
+        return res.status(500).json({ message: "Server error while deleting discount code." });
+    }
+};
+
+
+// --- Game Type (สำหรับ User) ---
+
+/**
+ * @route GET /api/gametypes
+ * @desc ดึงรายการประเภทเกมทั้งหมด
+ */
+export const getAllGameTypes_api = async (req: Request, res: Response) => {
+    try {
+        const [rows] = await dbcon.query<RowDataPacket[]>(
+            "SELECT type_id, typename FROM gametype ORDER BY typename ASC"
+        );
+        return res.status(200).json(rows);
+    } catch (error) {
+        console.error("Error fetching game types:", error);
+        return res.status(500).json({ message: "Server error while fetching game types." });
+    }
+};
+
+
+// --- Game Fetching (สำหรับ User/Guest) ---
 
 /**
  * @route GET /api/games/latest
- * @desc ดึงเกมทั้งหมด (Store) แสดง 10 เกมล่าสุด
+ * @desc ดึงรายการเกมล่าสุด 10 เกม
  */
 export const getLatestGames_api = async (req: Request, res: Response) => {
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
-            `SELECT g.game_id, g.name, g.price, g.release_date, g.description, g.image, t.typename AS type
+            `SELECT g.game_id, g.name, g.price, g.release_date, g.image, gt.typename
              FROM game g
-             JOIN gametype t ON g.type_id = t.type_id
+             JOIN gametype gt ON g.type_id = gt.type_id
              ORDER BY g.release_date DESC
              LIMIT 10`
         );
-        res.status(200).json(rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error." });
+        return res.status(200).json(rows);
+    } catch (error) {
+        console.error("Error fetching latest games:", error);
+        return res.status(500).json({ message: "Server error while fetching latest games." });
     }
 };
 
-// --- NEW: API ค้นหาเกมตามชื่อและชนิดที่ปรับปรุงแล้ว ---
+/**
+ * @route GET /api/games/top-sellers
+ * @desc ดึงรายการ 5 อันดับเกมขายดี
+ */
+export const getTopSellerGames_api = async (req: Request, res: Response) => {
+    try {
+        const [rows] = await dbcon.query<RowDataPacket[]>(
+            `SELECT g.game_id, g.name, g.price, g.release_date, g.image, gt.typename, COUNT(gtx.game_id) AS total_sold
+             FROM game g
+             JOIN gametype gt ON g.type_id = gt.type_id
+             JOIN gametransactionitem gtx ON g.game_id = gtx.game_id
+             GROUP BY g.game_id
+             ORDER BY total_sold DESC
+             LIMIT 5`
+        );
+        return res.status(200).json(rows);
+    } catch (error) {
+        console.error("Error fetching top seller games:", error);
+        return res.status(500).json({ message: "Server error while fetching top seller games." });
+    }
+};
+
 /**
  * @route GET /api/games/search
- * @desc ค้นหาเกม (ชื่อ) และ/หรือ กรองตามประเภท
- * @queryParam q (string, optional): ชื่อเกมที่ต้องการค้นหา (LIKE %a%)
- * @queryParam type_id (number, optional): ID ของประเภทเกมที่ต้องการกรอง
+ * @desc ค้นหาเกมด้วย keyword ในชื่อ และกรองด้วย type_id
+ * @query keyword (optional)
+ * @query type_id (optional)
  */
 export const searchGames_api = async (req: Request, res: Response) => {
-    // ดึงค่าจาก query parameters
-    const search_term = (req.query.q as string)?.trim() || '';
-    const type_id = (req.query.type_id as string)?.trim();
+    const { keyword, type_id } = req.query;
 
-    let sql = `
-        SELECT g.game_id, g.name, g.price, g.image, t.typename AS type
+    let query = `
+        SELECT g.game_id, g.name, g.price, g.release_date, g.image, gt.typename
         FROM game g
-        JOIN gametype t ON g.type_id = t.type_id
+        JOIN gametype gt ON g.type_id = gt.type_id
+        WHERE 1=1
     `;
     const params: (string | number)[] = [];
-    const whereConditions: string[] = [];
 
-    // 1. เงื่อนไขค้นหาชื่อเกม (LIKE %q%)
-    if (search_term) {
-        const wildcard_term = `%${search_term}%`;
-        whereConditions.push(`g.name LIKE ?`);
-        params.push(wildcard_term);
+    if (keyword) {
+        query += ` AND g.name LIKE ?`;
+        params.push(`%${keyword}%`);
     }
-    
-    // 2. เงื่อนไขกรองตามชนิดเกม (g.type_id = ?)
-    if (type_id && !isNaN(Number(type_id))) {
-        whereConditions.push(`g.type_id = ?`);
-        params.push(Number(type_id));
-    }
-    
-    // สร้าง WHERE clause (ถ้ามีเงื่อนไข)
-    if (whereConditions.length > 0) {
-        sql += ` WHERE ` + whereConditions.join(' AND ');
-    }
-    
-    // จัดเรียงผลลัพธ์
-    sql += ` ORDER BY g.name ASC`;
-    
-    try {
-        const [rows] = await dbcon.query<RowDataPacket[]>(sql, params);
-        
-        // ถ้าไม่มีการค้นหาและไม่มีการกรอง และไม่พบอะไรเลย ให้ส่ง 404
-        if (rows.length === 0 && (search_term || type_id)) {
-            return res.status(404).json({ message: "No games found matching the criteria." });
+
+    if (type_id) {
+        const numTypeId = Number(type_id);
+        if (!isNaN(numTypeId) && numTypeId > 0) {
+            query += ` AND g.type_id = ?`;
+            params.push(numTypeId);
         }
-        
-        res.status(200).json(rows);
-    } catch (err: any) {
-        console.error(err);
-        res.status(500).json({ message: "Server error during game search.", error: err.message });
+    }
+
+    query += ` ORDER BY g.name ASC`;
+
+    try {
+        const [rows] = await dbcon.query<RowDataPacket[]>(query, params);
+        return res.status(200).json(rows);
+    } catch (error) {
+        console.error("Error searching games:", error);
+        return res.status(500).json({ message: "Server error while searching games." });
     }
 };
 
 /**
  * @route GET /api/games/:game_id
- * @desc ดึงรายละเอียดเกมเดี่ยว
- * 💡 แก้ไข: ทำการ JOIN กับ gametype เพื่อดึง type_id และ typename
+ * @desc ดึงรายละเอียดเกมเดียว
  */
 export const getGameDetails_api = async (req: Request, res: Response) => {
-    const { game_id } = req.params;
-    if (!game_id) {
-        return res.status(400).json({ message: "Game ID is required." });
-    }
-
+    const game_id = req.params.game_id;
     try {
-        // ✅ FIX: SELECT type_id และใช้ JOIN เพื่อดึง typename
         const [rows] = await dbcon.query<RowDataPacket[]>(
-            `SELECT 
-                g.game_id, 
-                g.name, 
-                g.price, 
-                g.release_date, 
-                g.description, 
-                g.image, 
-                g.type_id, 
-                gt.typename AS type 
+            `SELECT g.game_id, g.name, g.price, g.release_date, g.description, g.image, g.type_id, gt.typename
              FROM game g
              JOIN gametype gt ON g.type_id = gt.type_id
              WHERE g.game_id = ?`,
@@ -238,47 +350,29 @@ export const getGameDetails_api = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "Game not found." });
         }
 
-        const gameData = rows[0]; 
-        
-        // แปลง Date เป็น ISO String 
-        if (gameData.release_date instanceof Date) {
-             gameData.release_date = gameData.release_date.toISOString();
-        }
-        // แปลง price ให้เป็น string ตามรูปแบบข้อมูลที่ client คาดหวัง
-        gameData.price = String(gameData.price); 
-
-        // 💡 ผลลัพธ์จะมีทั้ง game_id, name, price, description, image, type_id, และ type (typename)
-        return res.status(200).json(gameData);
-
+        return res.status(200).json(rows[0]);
     } catch (error) {
-        console.error("Error fetching game details:", error);
-        return res.status(500).json({ message: "Internal server error." });
+        console.error(`Error fetching game ${game_id} details:`, error);
+        return res.status(500).json({ message: "Server error while fetching game details." });
     }
 };
 
-
-
 /**
- * @route GET /api/games/top-sellers
- * @desc เกมขายดี Top 5
+ * @route GET /api/admin/games
+ * @desc ดึงรายการเกมทั้งหมด (Admin View)
  */
-export const getTopSellerGames_api = async (req: Request, res: Response) => {
+export const getAllGames_api = async (req: Request, res: Response) => {
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
-            `SELECT g.game_id, g.name, g.price, g.release_date, g.description, g.image, t.typename AS type,
-                    COUNT(gt.game_id) AS total_sold
-             FROM gametransaction gt
-             JOIN game g ON gt.game_id = g.game_id
-             JOIN gametype t ON g.type_id = t.type_id
-             GROUP BY g.game_id, g.name, g.price, g.release_date, g.description, g.image, t.typename
-             HAVING COUNT(gt.game_id) > 0
-             ORDER BY total_sold DESC
-             LIMIT 5`
+            `SELECT g.game_id, g.name, g.price, g.release_date, g.image, g.description, gt.typename
+             FROM game g
+             JOIN gametype gt ON g.type_id = gt.type_id
+             ORDER BY g.game_id DESC`
         );
-        res.status(200).json(rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error." });
+        return res.status(200).json(rows);
+    } catch (error) {
+        console.error("Error fetching all games for admin:", error);
+        return res.status(500).json({ message: "Server error while fetching all games." });
     }
 };
 
@@ -286,68 +380,67 @@ export const getTopSellerGames_api = async (req: Request, res: Response) => {
 // --- Basket Management (สำหรับ User) ---
 
 /**
- * @route POST /api/users/:user_id/basket/:game_id
- * @desc เพิ่มเกมลงตะกร้า (Add to Basket)
+ * @route GET /api/users/:user_id/basket
+ * @desc ดึงรายการเกมในตะกร้าของ User
  */
-export const addToBasket_api = async (req: Request, res: Response) => {
-    const uid = Number(req.params.user_id);
-    const game_id = Number(req.params.game_id);
-    
-    if (isNaN(uid) || uid <= 0 || isNaN(game_id) || game_id <= 0) {
-        return res.status(400).json({ message: "Invalid User ID or Game ID." });
-    }
+export const getBasket_api = async (req: Request, res: Response) => {
+    const uid = req.params.user_id;
 
     try {
-        const [libraryCheck] = await dbcon.query<RowDataPacket[]>(
-            "SELECT * FROM usersgamelibrary WHERE user_id = ? AND game_id = ?",
-            [uid, game_id]
+        // ดึงรายการในตะกร้าและ join กับข้อมูลเกม
+        const [rows] = await dbcon.query<RowDataPacket[]>(
+            `SELECT b.bid, b.uid, b.game_id, b.added_at, g.name AS game_name, g.price, g.image
+             FROM basket b
+             JOIN game g ON b.game_id = g.game_id
+             WHERE b.uid = ?
+             ORDER BY b.added_at DESC`,
+            [uid]
         );
-        if (libraryCheck.length > 0) {
-            return res.status(409).json({ message: "Game already exists in your library." });
-        }
-
-        const [basketCheck] = await dbcon.query<RowDataPacket[]>(
-            "SELECT * FROM basket WHERE uid = ? AND game_id = ?",
-            [uid, game_id]
-        );
-        if (basketCheck.length > 0) {
-            return res.status(409).json({ message: "Game already in basket." });
-        }
-
-        const [results] = await dbcon.query<OkPacket>(
-            "INSERT INTO basket (uid, game_id) VALUES (?, ?)",
-            [uid, game_id]
-        );
-
-        return res.status(201).json({ message: "Game added to basket successfully.", bid: results.insertId });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error." });
+        return res.status(200).json(rows);
+    } catch (error) {
+        console.error(`Error fetching basket for user ${uid}:`, error);
+        return res.status(500).json({ message: "Server error while fetching basket." });
     }
 };
 
 /**
- * @route GET /api/users/:user_id/basket
- * @desc ดูตะกร้า
+ * @route POST /api/users/:user_id/basket/:game_id
+ * @desc เพิ่มเกมเข้าตะกร้า
  */
-export const getBasket_api = async (req: Request, res: Response) => {
-    const uid = Number(req.params.user_id);
-    if (isNaN(uid) || uid <= 0) {
-        return res.status(400).json({ message: "Invalid User ID." });
-    }
+export const addToBasket_api = async (req: Request, res: Response) => {
+    const uid = req.params.user_id;
+    const game_id = req.params.game_id;
+
     try {
-        const [rows] = await dbcon.query<RowDataPacket[]>(
-            `SELECT b.bid, g.game_id, g.name AS game_name, g.price, g.image
-             FROM basket b
-             JOIN game g ON b.game_id = g.game_id
-             WHERE b.uid = ?`,
-            [uid]
+        // 1. ตรวจสอบว่าเกมอยู่ในคลังแล้วหรือไม่
+        const [libraryCheck] = await dbcon.query<RowDataPacket[]>(
+            "SELECT purchase_id FROM gamelibrary WHERE user_id = ? AND game_id = ?",
+            [uid, game_id]
         );
-        
-        res.status(200).json(rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error." });
+        if (libraryCheck.length > 0) {
+            return res.status(409).json({ message: "Game is already in your library." });
+        }
+
+        // 2. ตรวจสอบว่าเกมอยู่ในตะกร้าแล้วหรือไม่
+        const [basketCheck] = await dbcon.query<RowDataPacket[]>(
+            "SELECT bid FROM basket WHERE uid = ? AND game_id = ?",
+            [uid, game_id]
+        );
+        if (basketCheck.length > 0) {
+            return res.status(409).json({ message: "Game is already in your basket." });
+        }
+
+        // 3. เพิ่มเกมเข้าตะกร้า
+        const [results] = await dbcon.query<OkPacket>(
+            "INSERT INTO basket(uid, game_id, added_at) VALUES (?, ?, NOW())",
+            [uid, game_id]
+        );
+
+        return res.status(201).json({ message: "Game added to basket successfully.", bid: results.insertId });
+
+    } catch (error) {
+        console.error(`Error adding game ${game_id} to basket for user ${uid}:`, error);
+        return res.status(500).json({ message: "Server error while adding to basket." });
     }
 };
 
@@ -356,173 +449,224 @@ export const getBasket_api = async (req: Request, res: Response) => {
  * @desc ลบเกมออกจากตะกร้า
  */
 export const removeFromBasket_api = async (req: Request, res: Response) => {
-    const user_id = Number(req.params.user_id);
-    const bid = Number(req.params.bid);
-    
-    if (isNaN(user_id) || user_id <= 0 || isNaN(bid) || bid <= 0) {
-        return res.status(400).json({ message: "Invalid User ID or Basket ID." });
-    }
-    
+    const uid = req.params.user_id;
+    const bid = req.params.bid; // Basket ID
+
     try {
         const [results] = await dbcon.query<OkPacket>(
-            "DELETE FROM basket WHERE bid = ? AND uid = ?", 
-            [bid, user_id]
+            "DELETE FROM basket WHERE bid = ? AND uid = ?",
+            [bid, uid]
         );
-        
+
         if (results.affectedRows === 0) {
-            return res.status(404).json({ message: "Item not found in basket or access denied." });
+            return res.status(404).json({ message: "Basket item not found or does not belong to user." });
         }
-        
-        return res.status(200).json({ message: "Item removed from basket." });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error." });
+
+        return res.status(200).json({ message: "Game removed from basket successfully." });
+    } catch (error) {
+        console.error(`Error removing basket item ${bid} for user ${uid}:`, error);
+        return res.status(500).json({ message: "Server error while removing from basket." });
     }
 };
 
-// --- Library (สำหรับ User) ---
+
+// --- Game Purchase and Library (สำหรับ User) ---
 
 /**
  * @route GET /api/users/:user_id/library
- * @desc ดูคลังเกม
+ * @desc ดึงรายการเกมในคลัง (Library) ของ User
  */
 export const getUserGameLibrary_api = async (req: Request, res: Response) => {
-    const user_id = Number(req.params.user_id);
-    if (isNaN(user_id) || user_id <= 0) {
-        return res.status(400).json({ message: "Invalid User ID." });
-    }
+    const uid = req.params.user_id;
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
-            `SELECT g.game_id, g.name, g.price, g.image, g.release_date
-             FROM usersgamelibrary u
-             JOIN game g ON u.game_id = g.game_id
-             WHERE u.user_id = ?
-             ORDER BY u.purchase_date DESC`,
-            [user_id]
-        );
-        
-        res.status(200).json(rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error." });
-    }
-};
-
-// --- Discount Code CRUD (สำหรับ Admin) ---
-
-/**
- * @route GET /api/admin/discounts
- * @desc Admin ดูโค้ดส่วนลดทั้งหมด
- */
-export const getAllDiscountCodes_api = async (req: Request, res: Response) => {
-    try {
-        const [rows] = await dbcon.query<RowDataPacket[]>("SELECT * FROM discountcode");
-        res.status(200).json(rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error." });
-    }
-};
-
-/**
- * @route POST /api/admin/discounts
- * @desc Admin เพิ่มโค้ดส่วนลด
- */
-export const createDiscountCode_api = async (req: Request, res: Response) => {
-    const { code_name, discount_value, max_user } = req.body;
-    
-    // ✅ การตรวจสอบความถูกต้องของข้อมูล (Validation)
-    if (!code_name || isNaN(Number(discount_value)) || isNaN(Number(max_user)) || Number(discount_value) <= 0 || Number(max_user) <= 0) {
-         return res.status(400).json({ message: "Missing required fields or invalid number values (must be positive)." });
-    }
-    
-    const value = Number(discount_value);
-    const remaining_user = Number(max_user);
-    
-    try {
-        const [results] = await dbcon.query<OkPacket>(
-            "INSERT INTO discountcode(code_name, discount_value, remaining_user, max_user) VALUES (?, ?, ?, ?)",
-            [code_name, value, remaining_user, max_user]
-        );
-        
-        if (results.affectedRows > 0) {
-            return res.status(201).json({ message: "Discount code created successfully.", code_id: results.insertId });
-        }
-        res.status(400).json({ message: "Failed to create discount code." });
-    } catch (err: any) {
-        console.error(err);
-        res.status(500).json({ message: "Server error during code creation.", error: err.message });
-    }
-};
-
-/**
- * @route DELETE /api/admin/discounts/:code_id
- * @desc Admin ลบโค้ดส่วนลด
- */
-export const deleteDiscountCode_api = async (req: Request, res: Response) => {
-    const code_id = Number(req.params.code_id);
-    if (isNaN(code_id) || code_id <= 0) {
-        return res.status(400).json({ message: "Invalid Code ID." });
-    }
-    try {
-        const [results] = await dbcon.query<OkPacket>("DELETE FROM discountcode WHERE code_id = ?", [code_id]);
-
-        if (results.affectedRows === 0) {
-            return res.status(404).json({ message: "Discount code not found." });
-        }
-
-        return res.status(200).json({ message: "Discount code deleted successfully." });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error." });
-    }
-};
-
-// --- 2.3 ดึงประเภทเกมทั้งหมด (NEW) ---
-export const getAllGameTypes_api = async (req: Request, res: Response) => {
-    try {
-        const [rows] = await dbcon.query<RowDataPacket[]>("SELECT type_id, typename FROM gametype ORDER BY typename ASC");
-        res.status(200).json(rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error fetching game types." });
-    }
-};
-
-// --- 2.1 ดึงรายการเกมทั้งหมด (Admin View) (NEW) ---
-export const getAllGames_api = async (req: Request, res: Response) => {
-    try {
-        const [rows] = await dbcon.query<RowDataPacket[]>(
-            `SELECT g.game_id, g.name, g.price, g.release_date, g.image, t.typename AS type
-             FROM game g
-             JOIN gametype t ON g.type_id = t.type_id
-             ORDER BY g.game_id DESC`
-        );
-        res.status(200).json(rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error fetching all games." });
-    }
-};
-
-// --- 4.2, 5.3 User ใช้โค้ดส่วนลดในตะกร้า (NEW) ---
-export const applyDiscount_api = async (req: Request, res: Response) => {
-    const uid = Number(req.params.user_id);
-    const { code_name } = req.body;
-    
-    if (isNaN(uid) || uid <= 0) return res.status(400).json({ message: "Invalid User ID." });
-    if (!code_name) return res.status(400).json({ message: "Discount code is required." });
-
-    try {
-        // 1. คำนวณราคารวมในตะกร้า
-        const [basketItems] = await dbcon.query<RowDataPacket[]>(
-            `SELECT g.price FROM basket b JOIN game g ON b.game_id = g.game_id WHERE b.uid = ?`,
+            `SELECT gl.purchase_id, gl.game_id, gl.purchase_date, g.name AS game_name, g.image, g.description, gt.typename
+             FROM gamelibrary gl
+             JOIN game g ON gl.game_id = g.game_id
+             JOIN gametype gt ON g.type_id = gt.type_id
+             WHERE gl.user_id = ?
+             ORDER BY gl.purchase_date DESC`,
             [uid]
         );
-        if (basketItems.length === 0) return res.status(404).json({ message: "Basket is empty." });
-        const subtotal = basketItems.reduce((sum, item) => sum + item.price, 0);
+        return res.status(200).json(rows);
+    } catch (error) {
+        console.error(`Error fetching library for user ${uid}:`, error);
+        return res.status(500).json({ message: "Server error while fetching game library." });
+    }
+};
 
-        // 2. ตรวจสอบโค้ดส่วนลด (5.2: จำกัดจำนวนครั้ง)
+/**
+ * @route POST /api/users/:user_id/purchase
+ * @desc ดำเนินการซื้อเกมในตะกร้าทั้งหมด
+ * @body { code_name: string | null }
+ */
+export const purchaseGame_api = async (req: Request, res: Response) => {
+    const uid = Number(req.params.user_id);
+    const { code_name } = req.body;
+    let dbcon_transaction; // ใช้สำหรับ transaction
+
+    try {
+        dbcon_transaction = await dbcon.getConnection();
+        await dbcon_transaction.beginTransaction();
+
+        // 1. ดึงรายการเกมในตะกร้า
+        const [basketRows] = await dbcon_transaction.query<RowDataPacket[]>(
+            `SELECT b.bid, b.game_id, g.price
+             FROM basket b
+             JOIN game g ON b.game_id = g.game_id
+             WHERE b.uid = ?`,
+            [uid]
+        );
+
+        if (basketRows.length === 0) {
+            await dbcon_transaction.commit(); // ไม่มีเกมในตะกร้า ถือว่าสำเร็จ (ไม่ซื้ออะไรเลย)
+            return res.status(200).json({ message: "Basket is empty. No purchase made." });
+        }
+
+        const subtotal = basketRows.reduce((sum, item) => sum + item.price, 0);
+        let finalTotal = subtotal;
+        let discountCode = null;
+        let discountAmount = 0;
+        let codeId = null;
+
+        // 2. การประยุกต์ใช้ส่วนลด (ถ้ามี)
+        if (code_name) {
+            const [codeRows] = await dbcon_transaction.query<RowDataPacket[]>(
+                "SELECT code_id, discount_value, remaining_user FROM discountcode WHERE code_name = ? FOR UPDATE",
+                [code_name] // FOR UPDATE เพื่อป้องกันการใช้พร้อมกัน
+            );
+            discountCode = codeRows[0];
+
+            if (!discountCode || discountCode.remaining_user <= 0) {
+                await dbcon_transaction.rollback();
+                return res.status(400).json({ message: "Invalid or expired discount code." });
+            }
+
+            // ตรวจสอบการใช้ซ้ำ (1 ครั้ง/บัญชี)
+            const [usageCheck] = await dbcon_transaction.query<RowDataPacket[]>(
+                "SELECT transaction_id FROM gametransaction WHERE user_id = ? AND code_id = ?",
+                [uid, discountCode.code_id]
+            );
+            if (usageCheck.length > 0) {
+                await dbcon_transaction.rollback();
+                return res.status(409).json({ message: "You have already used this discount code." });
+            }
+
+            discountAmount = discountCode.discount_value;
+            finalTotal = Math.max(0, subtotal - discountAmount);
+            codeId = discountCode.code_id;
+
+            // 3. หักจำนวนการใช้ส่วนลด
+            await dbcon_transaction.query(
+                "UPDATE discountcode SET remaining_user = remaining_user - 1 WHERE code_id = ?",
+                [discountCode.code_id]
+            );
+        }
+
+        // 4. ตรวจสอบยอดเงินคงเหลือใน Wallet
+        const [walletRows] = await dbcon_transaction.query<RowDataPacket[]>(
+            "SELECT balance FROM wallet WHERE user_id = ? FOR UPDATE",
+            [uid] // FOR UPDATE เพื่อป้องกันการใช้จ่ายพร้อมกัน
+        );
+        const currentBalance = walletRows[0]?.balance || 0;
+
+        if (currentBalance < finalTotal) {
+            await dbcon_transaction.rollback();
+            return res.status(402).json({
+                message: "Insufficient wallet balance.",
+                required_amount: finalTotal,
+                current_balance: currentBalance
+            });
+        }
+
+        // 5. ดำเนินการซื้อ (Purchase)
+        // 5.1 สร้าง Transaction
+        const [purchaseResult] = await dbcon_transaction.query<OkPacket>(
+            "INSERT INTO gametransaction(user_id, total_amount, discount_used, final_amount, code_id, transaction_date) VALUES (?, ?, ?, ?, ?, NOW())",
+            [uid, subtotal, discountAmount, finalTotal, codeId]
+        );
+        const transactionId = purchaseResult.insertId;
+
+        // 5.2 หักยอดเงินจาก Wallet
+        await dbcon_transaction.query(
+            "UPDATE wallet SET balance = balance - ? WHERE user_id = ?",
+            [finalTotal, uid]
+        );
+
+        // 5.3 เพิ่มรายการเกมเข้าคลัง และบันทึก Transaction Items
+        for (const item of basketRows) {
+            // เพิ่มเข้าคลัง
+            await dbcon_transaction.query(
+                "INSERT INTO gamelibrary(user_id, game_id, purchase_date) VALUES (?, ?, NOW())",
+                [uid, item.game_id]
+            );
+            // บันทึกรายการใน Transaction
+            await dbcon_transaction.query(
+                "INSERT INTO gametransactionitem(transaction_id, game_id, price_paid) VALUES (?, ?, ?)",
+                [transactionId, item.game_id, item.price] // ใช้ราคาเต็มของแต่ละเกม
+            );
+        }
+
+        // 5.4 ล้างตะกร้าสินค้า
+        await dbcon_transaction.query(
+            "DELETE FROM basket WHERE uid = ?",
+            [uid]
+        );
+
+        // 6. Commit Transaction
+        await dbcon_transaction.commit();
+
+        return res.status(200).json({
+            message: "Purchase successful.",
+            transaction_id: transactionId,
+            final_amount: finalTotal,
+            purchased_items: basketRows.length
+        });
+
+    } catch (error) {
+        if (dbcon_transaction) {
+            await dbcon_transaction.rollback();
+        }
+        console.error("Error during purchase transaction:", error);
+        return res.status(500).json({ message: "Server error during purchase process." });
+    } finally {
+        if (dbcon_transaction) {
+            dbcon_transaction.release();
+        }
+    }
+};
+
+/**
+ * @route POST /api/discounts/apply
+ * @desc ตรวจสอบและคำนวณส่วนลดสำหรับตะกร้า
+ * @body { code_name: string, user_id: number }
+ * @response { message: string, code_name: string, subtotal_price: number, discount_value: number, final_price: number }
+ * @deprecated เนื่องจากรวมฟังก์ชันการตรวจสอบส่วนลดไว้ใน purchaseGame_api แล้ว
+ */
+export const applyDiscount_api = async (req: Request, res: Response) => {
+    const { code_name, user_id } = req.body;
+    const uid = Number(user_id);
+
+    if (!code_name || !uid) {
+        return res.status(400).json({ message: "Missing required fields: code_name and user_id." });
+    }
+
+    try {
+        // 1. ดึงราคารวมในตะกร้า (Subtotal)
+        const [basketRows] = await dbcon.query<RowDataPacket[]>(
+            `SELECT SUM(g.price) AS subtotal
+             FROM basket b
+             JOIN game g ON b.game_id = g.game_id
+             WHERE b.uid = ?`,
+            [uid]
+        );
+        const subtotal = basketRows[0]?.subtotal || 0;
+
+        if (subtotal === 0) {
+             return res.status(400).json({ message: "Basket is empty." });
+        }
+
+        // 2. ดึงข้อมูลโค้ดส่วนลดและสถานะการใช้งาน (ไม่ต้องใช้ FOR UPDATE เพราะแค่คำนวณ ไม่ได้หักลบ)
         const [codeRows] = await dbcon.query<RowDataPacket[]>(
             "SELECT code_id, discount_value, remaining_user FROM discountcode WHERE code_name = ?",
             [code_name]
@@ -534,14 +678,14 @@ export const applyDiscount_api = async (req: Request, res: Response) => {
 
         // 3. ตรวจสอบการใช้ซ้ำ (5.3: 1 ครั้ง/บัญชี)
         const [usageCheck] = await dbcon.query<RowDataPacket[]>(
-            // ตรวจสอบจากตาราง Transaction ว่ามีการใช้ code_id นี้แล้วหรือไม่
+            // 💡 แก้ไข: ควรตรวจสอบจากตาราง Transaction ว่ามีการใช้ code_id นี้แล้วหรือไม่
             "SELECT transaction_id FROM gametransaction WHERE user_id = ? AND code_id = ?",
             [uid, discountCode.code_id]
         );
         if (usageCheck.length > 0) {
             return res.status(409).json({ message: "You have already used this discount code." });
         }
-        
+
         // 4. คำนวณราคาสุทธิ
         const discountAmount = discountCode.discount_value;
         const finalTotal = Math.max(0, subtotal - discountAmount);
@@ -554,8 +698,102 @@ export const applyDiscount_api = async (req: Request, res: Response) => {
             final_price: finalTotal
         });
 
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error during discount application." });
+    } catch (error) {
+        console.error("Error applying discount:", error);
+        return res.status(500).json({ message: "Server error while applying discount." });
+    }
+};
+
+// --- Transaction History (สำหรับ User) ---
+
+/**
+ * @route GET /api/users/:user_id/history/transactions
+ * @desc ดึงประวัติการทำรายการ (เติมเงิน/ซื้อเกม)
+ */
+export const getTransactionHistory_api = async (req: Request, res: Response) => {
+    const uid = req.params.user_id;
+    try {
+        // ดึงประวัติการเติมเงิน
+        const [topupRows] = await dbcon.query<RowDataPacket[]>(
+            `SELECT topup_id, amount, transaction_date, 'TOPUP' as type
+             FROM topup
+             WHERE user_id = ?`,
+            [uid]
+        );
+
+        // ดึงประวัติการซื้อเกม
+        const [purchaseRows] = await dbcon.query<RowDataPacket[]>(
+            `SELECT transaction_id, final_amount as amount, transaction_date, 'PURCHASE' as type
+             FROM gametransaction
+             WHERE user_id = ?`,
+            [uid]
+        );
+
+        // รวมและเรียงลำดับรายการทั้งหมดตามวันที่
+        const combinedHistory = [...topupRows, ...purchaseRows]
+            .map(row => ({
+                id: row.topup_id || row.transaction_id,
+                amount: row.amount,
+                type: row.type,
+                date: row.transaction_date,
+            }))
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        return res.status(200).json(combinedHistory);
+    } catch (error) {
+        console.error(`Error fetching transaction history for user ${uid}:`, error);
+        return res.status(500).json({ message: "Server error while fetching transaction history." });
+    }
+};
+
+/**
+ * @route GET /api/users/:user_id/history/purchases
+ * @desc ดึงประวัติการซื้อเกมโดยละเอียด
+ */
+export const getGamePurchaseHistory_api = async (req: Request, res: Response) => {
+    const uid = req.params.user_id;
+
+    try {
+        // ดึงรายการ Transaction หลัก
+        const [transactions] = await dbcon.query<RowDataPacket[]>(
+            `SELECT transaction_id, total_amount, discount_used, final_amount, code_id, transaction_date
+             FROM gametransaction
+             WHERE user_id = ?
+             ORDER BY transaction_date DESC`,
+            [uid]
+        );
+
+        // ดึงรายการเกมที่ซื้อในแต่ละ Transaction
+        const history = await Promise.all(transactions.map(async (tx) => {
+            const [items] = await dbcon.query<RowDataPacket[]>(
+                `SELECT gtx.item_id, gtx.game_id, gtx.price_paid, g.name AS game_name
+                 FROM gametransactionitem gtx
+                 JOIN game g ON gtx.game_id = g.game_id
+                 WHERE gtx.transaction_id = ?`,
+                [tx.transaction_id]
+            );
+
+            // ดึงชื่อโค้ดส่วนลด (ถ้ามี)
+            let code_name = null;
+            if (tx.code_id) {
+                const [codeRow] = await dbcon.query<RowDataPacket[]>(
+                    "SELECT code_name FROM discountcode WHERE code_id = ?",
+                    [tx.code_id]
+                );
+                code_name = codeRow[0]?.code_name || null;
+            }
+
+
+            return {
+                ...tx,
+                code_name,
+                items: items
+            };
+        }));
+
+        return res.status(200).json(history);
+    } catch (error) {
+        console.error(`Error fetching game purchase history for user ${uid}:`, error);
+        return res.status(500).json({ message: "Server error while fetching game purchase history." });
     }
 };
