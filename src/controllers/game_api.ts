@@ -229,6 +229,7 @@ export const deleteDiscountCode_api = async (req: Request, res: Response) => {
 
 // --- Game Type (สำหรับ User) ---
 
+
 /**
  * @route GET /api/gametypes
  * @desc ดึงรายการประเภทเกมทั้งหมด
@@ -271,22 +272,38 @@ export const getLatestGames_api = async (req: Request, res: Response) => {
 /**
  * @route GET /api/games/top-sellers
  * @desc ดึงรายการ 5 อันดับเกมขายดี
+ * @requires การเชื่อมโยงตาราง game, gametransactionitem และการนับยอดขาย
  */
 export const getTopSellerGames_api = async (req: Request, res: Response) => {
     try {
-        const [rows] = await dbcon.query<RowDataPacket[]>(
-            `SELECT g.game_id, g.name, g.price, g.release_date, g.image, gt.typename, COUNT(gtx.game_id) AS total_sold
-             FROM game g
-             JOIN gametype gt ON g.type_id = gt.type_id
-             JOIN gametransactionitem gtx ON g.game_id = gtx.game_id
-             GROUP BY g.game_id
-             ORDER BY total_sold DESC
-             LIMIT 5`
-        );
-        return res.status(200).json(rows);
+        // 1. Query เพื่อหา 5 อันดับเกมที่มีการซื้อมากที่สุด (นับจากจำนวนรายการใน Transaction)
+        const sql = `
+            SELECT 
+                g.game_id, 
+                g.name, 
+                g.price, 
+                g.description, 
+                g.image, 
+                g.release_date, 
+                gt.type_name, 
+                COUNT(gi.game_id) AS total_sales
+            FROM game g
+            JOIN gametype gt ON g.type_id = gt.type_id
+            JOIN gametransactionitem gi ON g.game_id = gi.game_id 
+            GROUP BY g.game_id, g.name, g.price, g.description, g.image, g.release_date, gt.type_name
+            ORDER BY total_sales DESC
+            LIMIT 5;
+        `;
+        
+        const [games] = await dbcon.query<RowDataPacket[]>(sql);
+
+        // 2. คืนค่ารายการเกมที่พบ
+        return res.status(200).json(games);
+
     } catch (error) {
-        console.error("Error fetching top seller games:", error);
-        return res.status(500).json({ message: "Server error while fetching top seller games." });
+        console.error("Database error in getTopSellerGames_api:", error);
+        // ❌ หากเกิดข้อผิดพลาดในการ Query ให้คืนค่า 500
+        return res.status(500).json({ message: "Failed to fetch top seller games due to a server error." });
     }
 };
 
