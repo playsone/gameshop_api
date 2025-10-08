@@ -1,4 +1,4 @@
-// router.ts (ฉบับสมบูรณ์)
+// router.ts (ฉบับสมบูรณ์ พร้อมความคิดเห็นภาษาไทย)
 import express from "express";
 
 // --- Import Controllers ---
@@ -23,127 +23,122 @@ import {
     getGamePurchaseHistory_api, purchaseGame_api,
     getAdminTransactionHistory_api,
     purchaseGame_api2,
-    getWalletHistory_api // ✅ เพิ่ม import ฟังก์ชันใหม่
+    getWalletHistory_api
 } from "../controllers/wallet_api";
 
 
 const router = express.Router();
+// เส้นทางหลักของ API
 router.get('/', (_req, res) => {
     res.send('Welcome to the Game Shop API');
 });
 
 // =======================================================
-// 1. USER & AUTH ROUTES
+// 1. เส้นทางเกี่ยวกับผู้ใช้และการยืนยันตัวตน (USER & AUTH ROUTES)
 // =======================================================
-// POST /api/auth/register
+// (POST) สมัครสมาชิกใหม่
 router.post("/auth/register", register_api);
-// POST /api/auth/login
+// (POST) เข้าสู่ระบบ
 router.post("/auth/login", login_api);
 
-// USER MANAGEMENT (Admin/User)
-// GET /api/users
+// --- การจัดการผู้ใช้ (Admin/User) ---
+// (GET) ดึงข้อมูลผู้ใช้ทั้งหมด
 router.get("/users", getAllUsers_api); 
-// GET /api/users/by-email/:email
+// (GET) ดึงข้อมูลผู้ใช้ด้วย Email
 router.get("/users/by-email/:email", getUserByEmail_api);
-// GET /api/users/by-username/:username
+// (GET) ดึงข้อมูลผู้ใช้ด้วย Username
 router.get("/users/by-username/:username", getUserByUsername_api);
-// GET /api/users/:user_id
+// (GET) ดึงข้อมูลผู้ใช้ด้วย ID
 router.get("/users/:user_id", getUsersById_api);
 
-// USER PROFILE
-// GET /api/users/:user_id/profile
+// --- โปรไฟล์ผู้ใช้ (USER PROFILE) ---
+// (GET) ดูข้อมูลโปรไฟล์ส่วนตัว
 router.get("/users/:user_id/profile", getUserProfile_api);
-// PUT /api/users/:user_id/profile
+// (PUT) อัปเดตข้อมูลโปรไฟล์ส่วนตัว
 router.put("/users/:user_id/profile", updateUser_api);
 
-// SYSTEM MANAGEMENT (Admin Only)
-// POST /api/system/reset
+// --- การจัดการระบบ (สำหรับ Admin) ---
+// (POST) ล้างและรีเซ็ตฐานข้อมูลทั้งหมด
 router.post("/system/reset", reset_api);
-// POST /api/system/setup-db
+// (POST) ตั้งค่าฐานข้อมูลเริ่มต้นพร้อมข้อมูลตัวอย่าง
 router.post("/system/setup-db", setupDB_api);
 
 
 // =======================================================
-// 2. WALLET & PURCHASE
+// 2. เส้นทางเกี่ยวกับกระเป๋าเงินและการซื้อ (WALLET & PURCHASE)
 // =======================================================
-// GET /api/users/:user_id/wallet
+// (GET) ดูยอดเงินคงเหลือใน Wallet
 router.get("/users/:user_id/wallet", getWalletBalance_api);
-
-// ✅ NEW ROUTE: เพิ่มเส้นทางสำหรับดูประวัติเงินเข้า-ออกโดยเฉพาะ
+// (GET) ดูประวัติ Wallet ทั้งเงินเข้าและเงินออก
 router.get("/users/:user_id/wallet/history", getWalletHistory_api);
-
-// GET /api/users/:user_id/history
+// (GET) ดูประวัติการทำรายการทั้งหมด (แบบเก่า)
 router.get("/users/:user_id/history", getTransactionHistory_api);
-// GET /api/users/:user_id/purchases
+// (GET) ดูประวัติการซื้อเกมโดยเฉพาะ
 router.get("/users/:user_id/purchases", getGamePurchaseHistory_api);
 
-// POST /api/users/:user_id/topup
+// (POST) เติมเงินเข้า Wallet
 router.post("/users/:user_id/topup", topUpWallet_api); 
-// POST /api/users/:user_id/purchase (ซื้อเกมเดียว)
+// (POST) ซื้อเกม 1 เกม
 router.post("/users/:user_id/purchase", purchaseGame_api); 
-// POST /api/users/:user_id/purchase-basket (ซื้อจากตะกร้า)
-// 💡 แก้ไข: ควรแยก path เพื่อความชัดเจน
+// (POST) ซื้อเกมทั้งหมดในตะกร้า
 router.post("/users/:user_id/purchase-basket", purchaseGame_api2); 
-
-
-// POST /api/users/:user_id/basket/apply-discount
+// (POST) ใช้โค้ดส่วนลดกับตะกร้า
 router.post("/users/:user_id/basket/apply-discount", applyDiscount_api);
 
 
 // =======================================================
-// 3. GAME STORE
+// 3. เส้นทางเกี่ยวกับร้านค้าและเกม (GAME STORE)
 // =======================================================
-// GET /api/gametypes
+// (GET) ดึงประเภทเกมทั้งหมด
 router.get("/gametypes", getAllGameTypes_api);
-
-// GET /api/games/latest
+// (GET) ดึงรายการเกมล่าสุด
 router.get("/games/latest", getLatestGames_api);
-// GET /api/games/top-sellers
+// (GET) ดึงรายการเกมขายดี
 router.get("/games/top-sellers", getTopSellerGames_api);
-// GET /api/games/search
+// (GET) ค้นหาเกม (ตามชื่อหรือประเภท)
 router.get("/games/search", searchGames_api); 
-// GET /api/games/:game_id
+// (GET) ดูรายละเอียดเกมตาม ID
 router.get("/games/:game_id", getGameDetails_api);
 
-// USER LIBRARY & BASKET
-// GET /api/users/:user_id/library
+// --- คลังเกมและตะกร้าของผู้ใช้ (USER LIBRARY & BASKET) ---
+// (GET) ดูคลังเกมของตัวเอง
 router.get("/users/:user_id/library", getUserGameLibrary_api);
-// GET /api/users/:user_id/basket
+// (GET) ดูรายการเกมในตะกร้า
 router.get("/users/:user_id/basket", getBasket_api);
-// POST /api/users/:user_id/basket/:game_id
+// (POST) เพิ่มเกมลงในตะกร้า
 router.post("/users/:user_id/basket/:game_id", addToBasket_api);
-// DELETE /api/users/:user_id/basket/:bid
+// (DELETE) ลบเกมออกจากตะกร้า
 router.delete("/users/:user_id/basket/:bid", removeFromBasket_api);
 
 
 // =======================================================
-// 4. ADMIN ROUTES
+// 4. เส้นทางสำหรับผู้ดูแลระบบ (ADMIN ROUTES)
 // =======================================================
 
-// --- Transaction Admin ---
-// GET /api/admin/transactions
+// --- การจัดการธุรกรรม (Admin) ---
+// (GET) ดูประวัติธุรกรรมทั้งหมดของทุก User
 router.get("/admin/transactions", getAdminTransactionHistory_api);
 
-// --- Game Management ---
-// GET /api/admin/games
+// --- การจัดการเกม (Admin) ---
+// (GET) ดึงรายการเกมทั้งหมดสำหรับ Admin
 router.get("/admin/games", getAllGames_api);
-// POST /api/admin/games
+// (POST) เพิ่มเกมใหม่เข้าระบบ
 router.post("/admin/games", createGame_api); 
-// PUT /api/admin/games/:game_id
+// (PUT) อัปเดตข้อมูลเกม
 router.put("/admin/games/:game_id", updateGame_api); 
-// DELETE /api/admin/games/:game_id
+// (DELETE) ลบเกมออกจากระบบ
 router.delete("/admin/games/:game_id", deleteGame_api); 
 
-// --- Game Type Management ---
-// POST /api/admin/gametypes
+// --- การจัดการประเภทเกม (Admin) ---
+// (POST) เพิ่มประเภทเกมใหม่
 router.post("/admin/gametypes", createGameType_api); 
 
-// --- Discount Management ---
-// GET /api/admin/discounts
+// --- การจัดการโค้ดส่วนลด (Admin) ---
+// (GET) ดูโค้ดส่วนลดทั้งหมด
 router.get("/admin/discounts", getAllDiscountCodes_api);
-// POST /api/admin/discounts
+// (POST) สร้างโค้ดส่วนลดใหม่
 router.post("/admin/discounts", createDiscountCode_api);
-// DELETE /api/admin/discounts/:code_id
+// (DELETE) ลบโค้ดส่วนลด
 router.delete("/admin/discounts/:code_id", deleteDiscountCode_api); 
 
 export default router;
