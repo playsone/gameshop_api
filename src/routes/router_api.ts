@@ -1,13 +1,11 @@
-// router.ts (ฉบับสมบูรณ์ - ไม่ใช้ Middleware)
+// router.ts (ฉบับสมบูรณ์)
 import express from "express";
 
-// --- Import Controllers (ปรับปรุงให้ครอบคลุมฟังก์ชันที่จำเป็นทั้งหมด) ---
+// --- Import Controllers ---
 import {
     register_api, login_api, updateUser_api, getUserProfile_api,
     getAllUsers_api, 
-    // 💡 NEW: เพิ่มฟังก์ชันที่ขาดหายไปใน USER/SYSTEM
     getUsersById_api, getUserByEmail_api, 
-    // ✅ NEW: เพิ่ม getUserByUsername_api ที่เราสร้างขึ้น
     getUserByUsername_api, 
     reset_api, setupDB_api
 } from "../controllers/user_api";
@@ -17,16 +15,15 @@ import {
     getLatestGames_api, searchGames_api, getGameDetails_api, getTopSellerGames_api,
     addToBasket_api, getBasket_api, removeFromBasket_api, getUserGameLibrary_api,
     getAllDiscountCodes_api, createDiscountCode_api, deleteDiscountCode_api,
-    // 💡 NEW: เพิ่มฟังก์ชันที่ขาดหายไปใน GAME/DISCOUNT
     getAllGameTypes_api, getAllGames_api, applyDiscount_api 
 } from "../controllers/game_api";
 
 import {
     getWalletBalance_api, topUpWallet_api, getTransactionHistory_api,
     getGamePurchaseHistory_api, purchaseGame_api,
-    // 💡 NEW: เพิ่มฟังก์ชันที่ขาดหายไปใน WALLET/TRANSACTION
-    getAdminTransactionHistory_api ,
-    purchaseGame_api2
+    getAdminTransactionHistory_api,
+    purchaseGame_api2,
+    getWalletHistory_api // ✅ เพิ่ม import ฟังก์ชันใหม่
 } from "../controllers/wallet_api";
 
 
@@ -47,11 +44,11 @@ router.post("/auth/login", login_api);
 // GET /api/users
 router.get("/users", getAllUsers_api); 
 // GET /api/users/by-email/:email
-router.get("/users/by-email/:email", getUserByEmail_api); // 💡 ดึงข้อมูลผู้ใช้ด้วย Email
+router.get("/users/by-email/:email", getUserByEmail_api);
 // GET /api/users/by-username/:username
-router.get("/users/by-username/:username", getUserByUsername_api); // ✅ ดึงข้อมูลผู้ใช้ด้วย Username
+router.get("/users/by-username/:username", getUserByUsername_api);
 // GET /api/users/:user_id
-router.get("/users/:user_id", getUsersById_api); // 💡 ดึงข้อมูลผู้ใช้ด้วย ID
+router.get("/users/:user_id", getUsersById_api);
 
 // USER PROFILE
 // GET /api/users/:user_id/profile
@@ -61,9 +58,9 @@ router.put("/users/:user_id/profile", updateUser_api);
 
 // SYSTEM MANAGEMENT (Admin Only)
 // POST /api/system/reset
-router.post("/system/reset", reset_api); // 💡 ล้างฐานข้อมูล
+router.post("/system/reset", reset_api);
 // POST /api/system/setup-db
-router.post("/system/setup-db", setupDB_api); // 💡 ติดตั้งฐานข้อมูลเริ่มต้น
+router.post("/system/setup-db", setupDB_api);
 
 
 // =======================================================
@@ -71,6 +68,10 @@ router.post("/system/setup-db", setupDB_api); // 💡 ติดตั้งฐ�
 // =======================================================
 // GET /api/users/:user_id/wallet
 router.get("/users/:user_id/wallet", getWalletBalance_api);
+
+// ✅ NEW ROUTE: เพิ่มเส้นทางสำหรับดูประวัติเงินเข้า-ออกโดยเฉพาะ
+router.get("/users/:user_id/wallet/history", getWalletHistory_api);
+
 // GET /api/users/:user_id/history
 router.get("/users/:user_id/history", getTransactionHistory_api);
 // GET /api/users/:user_id/purchases
@@ -78,9 +79,11 @@ router.get("/users/:user_id/purchases", getGamePurchaseHistory_api);
 
 // POST /api/users/:user_id/topup
 router.post("/users/:user_id/topup", topUpWallet_api); 
-// POST /api/users/:user_id/purchase
+// POST /api/users/:user_id/purchase (ซื้อเกมเดียว)
 router.post("/users/:user_id/purchase", purchaseGame_api); 
-router.post("/users/:user_id/purchase", purchaseGame_api2); 
+// POST /api/users/:user_id/purchase-basket (ซื้อจากตะกร้า)
+// 💡 แก้ไข: ควรแยก path เพื่อความชัดเจน
+router.post("/users/:user_id/purchase-basket", purchaseGame_api2); 
 
 
 // POST /api/users/:user_id/basket/apply-discount
@@ -91,7 +94,7 @@ router.post("/users/:user_id/basket/apply-discount", applyDiscount_api);
 // 3. GAME STORE
 // =======================================================
 // GET /api/gametypes
-router.get("/gametypes", getAllGameTypes_api); // 💡 ดึงรายการประเภทเกมทั้งหมด
+router.get("/gametypes", getAllGameTypes_api);
 
 // GET /api/games/latest
 router.get("/games/latest", getLatestGames_api);
@@ -119,11 +122,11 @@ router.delete("/users/:user_id/basket/:bid", removeFromBasket_api);
 
 // --- Transaction Admin ---
 // GET /api/admin/transactions
-router.get("/admin/transactions", getAdminTransactionHistory_api); // 💡 ดูประวัติธุรกรรมรวมของทุก User
+router.get("/admin/transactions", getAdminTransactionHistory_api);
 
 // --- Game Management ---
 // GET /api/admin/games
-router.get("/admin/games", getAllGames_api); // 💡 ดึงรายการเกมทั้งหมด (Admin View)
+router.get("/admin/games", getAllGames_api);
 // POST /api/admin/games
 router.post("/admin/games", createGame_api); 
 // PUT /api/admin/games/:game_id
