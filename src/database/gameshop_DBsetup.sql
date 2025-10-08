@@ -56,6 +56,7 @@ CREATE TABLE wallettransaction (
     user_id INT NOT NULL,
     amount DECIMAL(12,2) NOT NULL,
     wallettransaction_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status int default 0,
     CONSTRAINT fk_wallet_user FOREIGN KEY (user_id) REFERENCES users(user_id)
         ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -165,12 +166,12 @@ INSERT INTO discountcode (code_name, discount_value, remaining_user, max_user) V
 -- ------------------------------
 -- 5) Wallet transactions
 -- ------------------------------
-INSERT INTO wallettransaction (user_id, amount) VALUES
-(2, 200.00),
-(3, 150.00),
-(2, 50.00),
-(4, 100.00),
-(5, 80.00);
+INSERT INTO wallettransaction (user_id, amount,status) VALUES
+(2, 200.00,0),
+(3, 150.00,1),
+(2, 50.00,0),
+(4, 100.00,1),
+(5, 80.00,0);
 
 -- ------------------------------
 -- 6) Game ranking
@@ -200,7 +201,7 @@ INSERT INTO gametransaction (user_id, game_id, code_id, price) VALUES
 (2, 1, 1, 26.99),  -- WELCOME10
 (2, 3, NULL, 39.99),
 (3, 2, 2, 39.99),  -- SPRING20
-(4, 4, NULL, 19.99),usersusersusers
+(4, 4, NULL, 19.99),
 (5, 5, NULL, 24.99),
 (2, 5, 3, 13.99),  -- VIP50
 (3, 1, NULL, 29.99),
@@ -358,24 +359,24 @@ WHERE g.game_id = ?;
 -- 3.1 แสดง Wallet Balance
 SELECT wallet
 FROM users
-WHERE user_id = ?;
+WHERE user_id = 1;
 
 -- 3.2 เติมเงิน
 START TRANSACTION;
 
 UPDATE users
-SET wallet = wallet + ?
-WHERE user_id = ?;
+SET wallet = wallet + 500
+WHERE user_id = 1;
 
-INSERT INTO wallettransaction(user_id, amount)
-VALUES (?, ?);
+INSERT INTO wallettransaction(user_id, amount,status)
+VALUES (1, 500,1);
 
 COMMIT;
 
 -- 3.3 ดูประวัติการทำรายการ
-SELECT 'wallet' AS type, amount, wallettransaction_date AS date
+SELECT 'wallet' AS type, amount, wallettransaction_date AS date,status 
 FROM wallettransaction
-WHERE user_id = ?
+WHERE user_id = 1
 UNION
 SELECT 'purchase' AS type, price AS amount, bought_date AS date
 FROM gametransaction
