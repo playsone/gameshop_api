@@ -241,115 +241,115 @@ export const getAdminTransactionHistory_api = async (req: Request, res: Response
 };
 
 
-// // --- 3.5, 3.6, 4.3 ตัดเงินจาก Wallet (ซื้อเกมหลายเกม) ---
-// export const purchaseGame_api = async (req: Request, res: Response) => {
-//     const user_id = Number(req.params.user_id);
-//     // 💡 ปรับให้รับ 'code_name' มาจาก body (ถ้ามี) สำหรับส่วนลดรวม
-//     const { code_name } = req.body; 
+// --- 3.5, 3.6, 4.3 ตัดเงินจาก Wallet (ซื้อเกมหลายเกม) ---
+export const purchaseGame_api2 = async (req: Request, res: Response) => {
+    const user_id = Number(req.params.user_id);
+    // 💡 ปรับให้รับ 'code_name' มาจาก body (ถ้ามี) สำหรับส่วนลดรวม
+    const { code_name } = req.body; 
 
-//     try {
-//         await dbcon.query("START TRANSACTION");
+    try {
+        await dbcon.query("START TRANSACTION");
 
-//         // 1. ดึงเกมในตะกร้าทั้งหมด
-//         const [basketItems] = await dbcon.query<RowDataPacket[]>(
-//             `SELECT b.bid, g.game_id, g.name, g.price
-//             FROM basket b JOIN game g ON b.game_id = g.game_id
-//             WHERE b.uid = ?`,
-//             [user_id]
-//         );
-//         if (basketItems.length === 0) { await dbcon.query("ROLLBACK"); return res.status(404).json({ message: "Basket is empty." }); }
+        // 1. ดึงเกมในตะกร้าทั้งหมด
+        const [basketItems] = await dbcon.query<RowDataPacket[]>(
+            `SELECT b.bid, g.game_id, g.name, g.price
+            FROM basket b JOIN game g ON b.game_id = g.game_id
+            WHERE b.uid = ?`,
+            [user_id]
+        );
+        if (basketItems.length === 0) { await dbcon.query("ROLLBACK"); return res.status(404).json({ message: "Basket is empty." }); }
 
-//         let subtotal = basketItems.reduce((sum, item) => sum + item.price, 0);
-//         let finalPrice = subtotal;
-//         let discountId: number | null = null;
-//         let discountAmount = 0;
+        let subtotal = basketItems.reduce((sum, item) => sum + item.price, 0);
+        let finalPrice = subtotal;
+        let discountId: number | null = null;
+        let discountAmount = 0;
 
-//         // 2. ตรวจสอบการซื้อซ้ำ (4.4) และเตรียมรายการเกม
-//         for (const item of basketItems) {
-//             const [libraryCheck] = await dbcon.query<RowDataPacket[]>(
-//                 "SELECT * FROM usersgamelibrary WHERE user_id = ? AND game_id = ?",
-//                 [user_id, item.game_id]
-//             );
-//             if (libraryCheck.length > 0) { 
-//                 await dbcon.query("ROLLBACK"); 
-//                 return res.status(409).json({ message: `Game '${item.name}' already exists in your library. Purchase aborted.` }); 
-//             }
-//         }
+        // 2. ตรวจสอบการซื้อซ้ำ (4.4) และเตรียมรายการเกม
+        for (const item of basketItems) {
+            const [libraryCheck] = await dbcon.query<RowDataPacket[]>(
+                "SELECT * FROM usersgamelibrary WHERE user_id = ? AND game_id = ?",
+                [user_id, item.game_id]
+            );
+            if (libraryCheck.length > 0) { 
+                await dbcon.query("ROLLBACK"); 
+                return res.status(409).json({ message: `Game '${item.name}' already exists in your library. Purchase aborted.` }); 
+            }
+        }
 
-//         // 3. จัดการโค้ดส่วนลด (ถ้ามี)
-//         if (code_name) {
-//             const [codeRows] = await dbcon.query<RowDataPacket[]>(
-//                 "SELECT code_id, discount_value, remaining_user FROM discountcode WHERE code_name = ?",
-//                 [code_name]
-//             );
-//             const discountCode = codeRows[0];
+        // 3. จัดการโค้ดส่วนลด (ถ้ามี)
+        if (code_name) {
+            const [codeRows] = await dbcon.query<RowDataPacket[]>(
+                "SELECT code_id, discount_value, remaining_user FROM discountcode WHERE code_name = ?",
+                [code_name]
+            );
+            const discountCode = codeRows[0];
             
-//             if (discountCode && discountCode.remaining_user > 0) {
-//                 // 3.1 ตรวจสอบการใช้ซ้ำ
-//                  const [usageCheck] = await dbcon.query<RowDataPacket[]>(
-//                     "SELECT transaction_id FROM gametransaction WHERE user_id = ? AND code_id = ?",
-//                     [user_id, discountCode.code_id]
-//                 );
-//                 if (usageCheck.length > 0) {
-//                     await dbcon.query("ROLLBACK"); 
-//                     return res.status(409).json({ message: "Discount code already used by this account." });
-//                 }
+            if (discountCode && discountCode.remaining_user > 0) {
+                // 3.1 ตรวจสอบการใช้ซ้ำ
+                 const [usageCheck] = await dbcon.query<RowDataPacket[]>(
+                    "SELECT transaction_id FROM gametransaction WHERE user_id = ? AND code_id = ?",
+                    [user_id, discountCode.code_id]
+                );
+                if (usageCheck.length > 0) {
+                    await dbcon.query("ROLLBACK"); 
+                    return res.status(409).json({ message: "Discount code already used by this account." });
+                }
 
-//                 discountId = discountCode.code_id;
-//                 discountAmount = discountCode.discount_value;
-//                 finalPrice = Math.max(0, subtotal - discountAmount);
-//             } else {
-//                 await dbcon.query("ROLLBACK"); 
-//                 return res.status(400).json({ message: "Invalid or expired discount code." });
-//             }
-//         }
+                discountId = discountCode.code_id;
+                discountAmount = discountCode.discount_value;
+                finalPrice = Math.max(0, subtotal - discountAmount);
+            } else {
+                await dbcon.query("ROLLBACK"); 
+                return res.status(400).json({ message: "Invalid or expired discount code." });
+            }
+        }
         
-//         // 4. ตรวจสอบยอดเงิน (3.6: ใช้ FOR UPDATE ป้องกัน Race Condition)
-//         const [userRows] = await dbcon.query<RowDataPacket[]>(
-//             "SELECT wallet FROM users WHERE user_id = ? FOR UPDATE",
-//             [user_id]
-//         );
-//         const userWallet = userRows[0]?.wallet;
+        // 4. ตรวจสอบยอดเงิน (3.6: ใช้ FOR UPDATE ป้องกัน Race Condition)
+        const [userRows] = await dbcon.query<RowDataPacket[]>(
+            "SELECT wallet FROM users WHERE user_id = ? FOR UPDATE",
+            [user_id]
+        );
+        const userWallet = userRows[0]?.wallet;
 
-//         if (userWallet === undefined) { await dbcon.query("ROLLBACK"); return res.status(404).json({ message: "User not found." }); }
-//         if (userWallet < finalPrice) { await dbcon.query("ROLLBACK"); return res.status(402).json({ message: "Insufficient funds in wallet." }); }
+        if (userWallet === undefined) { await dbcon.query("ROLLBACK"); return res.status(404).json({ message: "User not found." }); }
+        if (userWallet < finalPrice) { await dbcon.query("ROLLBACK"); return res.status(402).json({ message: "Insufficient funds in wallet." }); }
 
-//         // 5. ดำเนินการธุรกรรม
-//         await dbcon.query<OkPacket>("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", [finalPrice, user_id]);
+        // 5. ดำเนินการธุรกรรม
+        await dbcon.query<OkPacket>("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", [finalPrice, user_id]);
         
-//         // 5.1 บันทึกการซื้อเกมแต่ละเกม (4.3: ซื้อหลายเกมต่อครั้ง)
-//         for (const item of basketItems) {
-//             // 💡 Note: ราคานี้อาจต้องมีการปรับราคาต่อเกม ถ้าใช้ส่วนลดแบบ % แต่เราใช้แบบลดรวมยอด
-//             const gamePriceAfterDiscount = (item.price / subtotal) * finalPrice;
+        // 5.1 บันทึกการซื้อเกมแต่ละเกม (4.3: ซื้อหลายเกมต่อครั้ง)
+        for (const item of basketItems) {
+            // 💡 Note: ราคานี้อาจต้องมีการปรับราคาต่อเกม ถ้าใช้ส่วนลดแบบ % แต่เราใช้แบบลดรวมยอด
+            const gamePriceAfterDiscount = (item.price / subtotal) * finalPrice;
             
-//             await dbcon.query<OkPacket>(
-//                 "INSERT INTO gametransaction(user_id, game_id, code_id, price) VALUES (?, ?, ?, ?)",
-//                 [user_id, item.game_id, discountId, gamePriceAfterDiscount] // 💡 บันทึกราคาที่ถูกหักส่วนลดตามสัดส่วน
-//             );
-//             await dbcon.query<OkPacket>("INSERT INTO usersgamelibrary(user_id, game_id) VALUES (?, ?)", [user_id, item.game_id]);
-//         }
+            await dbcon.query<OkPacket>(
+                "INSERT INTO gametransaction(user_id, game_id, code_id, price) VALUES (?, ?, ?, ?)",
+                [user_id, item.game_id, discountId, gamePriceAfterDiscount] // 💡 บันทึกราคาที่ถูกหักส่วนลดตามสัดส่วน
+            );
+            await dbcon.query<OkPacket>("INSERT INTO usersgamelibrary(user_id, game_id) VALUES (?, ?)", [user_id, item.game_id]);
+        }
         
-//         // 5.2 ลดจำนวนโค้ดส่วนลด (ถ้าใช้) (5.4)
-//         if (discountId !== null) {
-//             await dbcon.query<OkPacket>("UPDATE discountcode SET remaining_user = remaining_user - 1 WHERE code_id = ?", [discountId]);
-//         }
+        // 5.2 ลดจำนวนโค้ดส่วนลด (ถ้าใช้) (5.4)
+        if (discountId !== null) {
+            await dbcon.query<OkPacket>("UPDATE discountcode SET remaining_user = remaining_user - 1 WHERE code_id = ?", [discountId]);
+        }
         
-//         // 5.3 ล้างตะกร้า
-//         await dbcon.query<OkPacket>("DELETE FROM basket WHERE uid = ?", [user_id]);
+        // 5.3 ล้างตะกร้า
+        await dbcon.query<OkPacket>("DELETE FROM basket WHERE uid = ?", [user_id]);
 
-//         await dbcon.query("COMMIT");
+        await dbcon.query("COMMIT");
 
-//         res.status(200).json({ 
-//             message: "Purchase successful. Games added to your library.", 
-//             subtotal: subtotal,
-//             discount_applied: discountAmount,
-//             final_price: finalPrice, 
-//             items_purchased: basketItems.length
-//         });
+        res.status(200).json({ 
+            message: "Purchase successful. Games added to your library.", 
+            subtotal: subtotal,
+            discount_applied: discountAmount,
+            final_price: finalPrice, 
+            items_purchased: basketItems.length
+        });
 
-//     } catch (err: any) {
-//         await dbcon.query("ROLLBACK"); 
-//         console.error(err);
-//         res.status(500).json({ message: "Purchase failed due to server error.", error: err.message });
-//     }
-// };
+    } catch (err: any) {
+        await dbcon.query("ROLLBACK"); 
+        console.error(err);
+        res.status(500).json({ message: "Purchase failed due to server error.", error: err.message });
+    }
+};

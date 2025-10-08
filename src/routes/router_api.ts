@@ -25,7 +25,8 @@ import {
     getWalletBalance_api, topUpWallet_api, getTransactionHistory_api,
     getGamePurchaseHistory_api, purchaseGame_api,
     // 💡 NEW: เพิ่มฟังก์ชันที่ขาดหายไปใน WALLET/TRANSACTION
-    getAdminTransactionHistory_api 
+    getAdminTransactionHistory_api ,
+    purchaseGame_api2
 } from "../controllers/wallet_api";
 
 
@@ -79,6 +80,8 @@ router.get("/users/:user_id/purchases", getGamePurchaseHistory_api);
 router.post("/users/:user_id/topup", topUpWallet_api); 
 // POST /api/users/:user_id/purchase
 router.post("/users/:user_id/purchase", purchaseGame_api); 
+router.post("/users/:user_id/purchase", purchaseGame_api2); 
+
 
 // POST /api/users/:user_id/basket/apply-discount
 router.post("/users/:user_id/basket/apply-discount", applyDiscount_api);
