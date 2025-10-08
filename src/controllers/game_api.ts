@@ -896,3 +896,25 @@ export const getGamePurchaseHistory_api = async (
       .json({ message: "Server error while fetching game purchase history." });
   }
 };
+
+/**
+ * @route GET /api/promotions
+ * @desc ดึงโค้ดส่วนลดที่ยังใช้งานได้ทั้งหมด (สำหรับแสดงผลหน้าบ้าน)
+ */
+export const getActivePromotions_api = async (_req: Request, res: Response) => {
+    try {
+        // เลือกเฉพาะโค้ดที่ยังเหลือให้ใช้อยู่ (remaining_user > 0)
+        const [rows] = await dbcon.query<RowDataPacket[]>(
+            `SELECT 
+                code_name, 
+                discount_value 
+            FROM discountcode 
+            WHERE remaining_user > 0 
+            ORDER BY discount_value DESC`
+        );
+        res.status(200).json(rows);
+    } catch (err) {
+        console.error("Error fetching active promotions:", err);
+        res.status(500).json({ message: "Server error." });
+    }
+};

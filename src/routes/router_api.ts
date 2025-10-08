@@ -15,7 +15,8 @@ import {
     getLatestGames_api, searchGames_api, getGameDetails_api, getTopSellerGames_api,
     addToBasket_api, getBasket_api, removeFromBasket_api, getUserGameLibrary_api,
     getAllDiscountCodes_api, createDiscountCode_api, deleteDiscountCode_api,
-    getAllGameTypes_api, getAllGames_api, applyDiscount_api 
+    getAllGameTypes_api, getAllGames_api, applyDiscount_api ,
+    getActivePromotions_api
 } from "../controllers/game_api";
 
 import {
@@ -133,7 +134,11 @@ router.delete("/admin/games/:game_id", deleteGame_api);
 // (POST) เพิ่มประเภทเกมใหม่
 router.post("/admin/gametypes", createGameType_api); 
 
-// --- การจัดการโค้ดส่วนลด (Admin) ---
+// --- การจัดการโค้ดส่วนลด (Admin/users) ---
+// (GET) ดึงโปรโมชั่น (โค้ดส่วนลดที่ยังใช้ได้)
+// 👇 เพิ่มเส้นทางใหม่นี้
+router.get("/promotions", getActivePromotions_api);
+
 // (GET) ดูโค้ดส่วนลดทั้งหมด
 router.get("/admin/discounts", getAllDiscountCodes_api);
 // (POST) สร้างโค้ดส่วนลดใหม่
