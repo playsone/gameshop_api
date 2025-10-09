@@ -124,11 +124,11 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- 1) Users
 -- ------------------------------
 INSERT INTO users (username, email, password, image, wallet, role) VALUES
-('admin', 'admin@example.com', 'admin123', 'admin.png', 1000.00, 1),
-('user1', 'user1@example.com', 'user123', 'user1.png', 500.00, 0),
-('user2', 'user2@example.com', 'user234', 'user2.png', 300.00, 0),
-('user3', 'user3@example.com', 'user345', 'user3.png', 200.00, 0),
-('user4', 'user4@example.com', 'user456', 'user4.png', 150.00, 0);
+('admin', 'admin@example.com', '$2a$10$CIQnPSI/lBLxu3BVSeVcduW64mP6l69mBDk9Y9DsEnvoKlkNkYBBu', 'admin.png', 1000.00, 1),
+('user1', 'user1@example.com', '$2a$10$CIQnPSI/lBLxu3BVSeVcduW64mP6l69mBDk9Y9DsEnvoKlkNkYBBu', 'user1.png', 500.00, 0),
+('user2', 'user2@example.com', '$2a$10$CIQnPSI/lBLxu3BVSeVcduW64mP6l69mBDk9Y9DsEnvoKlkNkYBBu', 'user2.png', 300.00, 0),
+('user3', 'user3@example.com', '$2a$10$CIQnPSI/lBLxu3BVSeVcduW64mP6l69mBDk9Y9DsEnvoKlkNkYBBu', 'user3.png', 200.00, 0),
+('user4', 'user4@example.com', '$2a$10$CIQnPSI/lBLxu3BVSeVcduW64mP6l69mBDk9Y9DsEnvoKlkNkYBBu', 'user4.png', 150.00, 0);
 
 -- ------------------------------
 -- 2) Game types
