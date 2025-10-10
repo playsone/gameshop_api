@@ -247,9 +247,8 @@ export const getAllDiscountCodes_api = async (req: Request, res: Response) => {
  * @desc Admin: Get a single discount code by ID
  */
 export const getDiscountCodeById_api = async (req: Request, res: Response) => {
-  console.log("เข้ามาใน getDiscountCodeById_api แล้ว");
-    const id = req.params.id;
-        console.log("ID ที่ดึงมา:", id); 
+    const id = req.params.code_id;
+    console.log("ID ที่ดึงมา:", id); 
 
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
@@ -263,7 +262,7 @@ export const getDiscountCodeById_api = async (req: Request, res: Response) => {
     } catch (error) {
         console.error(`Error fetching discount code ${id}:`, error);
         return res.status(500).json({ message: "Server error while fetching discount code." });
-    }
+    }  
 };
 
 /**
