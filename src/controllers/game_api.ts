@@ -243,13 +243,12 @@ export const getAllDiscountCodes_api = async (req: Request, res: Response) => {
   }
 };
 /**
- * @route GET /api/admin/discounts/:id
- * @desc Admin: Get a single discount code by ID
+ * @desc ดึงข้อมูลคูปองเดียวด้วย ID
+ * @route GET /api/admin/discounts/:code_id
  */
 export const getDiscountCodeById_api = async (req: Request, res: Response) => {
+    // ✅ แก้ไข: เปลี่ยนจาก 'id' เป็น 'code_id' ให้ตรงกับ router.ts
     const id = req.params.code_id;
-    console.log("ID ที่ดึงมา:", id); 
-
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
             "SELECT code_id, code_name, discount_value, remaining_user, max_user FROM discountcode WHERE code_id = ?",
@@ -261,23 +260,21 @@ export const getDiscountCodeById_api = async (req: Request, res: Response) => {
         return res.status(200).json(rows[0]);
     } catch (error) {
         console.error(`Error fetching discount code ${id}:`, error);
-        return res.status(500).json({ message: "Server error while fetching discount code." });
-    }  
+        return res.status(500).json({ message: "Server error." });
+    }
 };
 
 /**
- * @route PUT /api/admin/discounts/:id
- * @desc Admin: Update a discount code
+ * @desc อัปเดตข้อมูลคูปอง
+ * @route PUT /api/admin/discounts/:code_id
  */
 export const updateDiscountCode_api = async (req: Request, res: Response) => {
-    const id = req.params.id;
+    // ✅ แก้ไข: เปลี่ยนจาก 'id' เป็น 'code_id' ให้ตรงกับ router.ts
+    const id = req.params.code_id;
     const { code_name, discount_value, max_user } = req.body;
 
-    if (!code_name || discount_value === undefined || max_user === undefined) {
-        return res.status(400).json({ message: "Missing required fields." });
-    }
-    if (Number(discount_value) <= 0 || Number(max_user) < 1) {
-        return res.status(400).json({ message: "Invalid discount value or max user." });
+    if (!code_name || discount_value <= 0 || max_user < 1) {
+        return res.status(400).json({ message: "Invalid data provided." });
     }
 
     try {
@@ -285,16 +282,20 @@ export const updateDiscountCode_api = async (req: Request, res: Response) => {
             "UPDATE discountcode SET code_name = ?, discount_value = ?, max_user = ? WHERE code_id = ?",
             [code_name, discount_value, max_user, id]
         );
+
         if (results.affectedRows === 0) {
             return res.status(404).json({ message: "Discount code not found or no changes made." });
         }
         return res.status(200).json({ message: "Discount code updated successfully." });
     } catch (error) {
         console.error(`Error updating discount code ${id}:`, error);
-        return res.status(500).json({ message: "Server error while updating discount code." });
+        return res.status(500).json({ message: "Server error." });
     }
 };
-
+/**
+ * @desc ดึงข้อมูลคูปองด้วยชื่อโค้ด
+ * @route GET /api/admin/discountsValue/:code_name
+ * */
 export const getDiscountByCodeName_api = async (req: Request, res: Response) => {
   const code = req.params.code_name;
   try {
@@ -326,34 +327,31 @@ export const getUsedCode_api = async (req: Request, res: Response) => {
     return res
       .status(500)
       .json({ message: "Server error while fetching discount codes." });
+
   }
 };
-
 /**
+ * @desc ลบคูปอง
  * @route DELETE /api/admin/discounts/:code_id
- * @desc Admin จัดการส่วนลด - ลบโค้ดส่วนลด
  */
 export const deleteDiscountCode_api = async (req: Request, res: Response) => {
-  const code_id = req.params.code_id;
-  try {
-    const [results] = await dbcon.query<OkPacket>(
-      "DELETE FROM discountcode WHERE code_id = ?",
-      [code_id]
-    );
-    if (results.affectedRows === 0) {
-      return res.status(404).json({ message: "Discount code not found." });
+    // ✅ แก้ไข: เปลี่ยนจาก 'id' เป็น 'code_id' ให้ตรงกับ router.ts
+    const id = req.params.code_id;
+    try {
+        const [results] = await dbcon.query<OkPacket>(
+            "DELETE FROM discountcode WHERE code_id = ?",
+            [id]
+        );
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ message: "Discount code not found." });
+        }
+        return res.status(200).json({ message: "Discount code deleted successfully." });
+    } catch (error) {
+        console.error(`Error deleting discount code ${id}:`, error);
+        return res.status(500).json({ message: "Server error while deleting discount code." });
     }
-    return res
-      .status(200)
-      .json({ message: "Discount code deleted successfully." });
-  } catch (error) {
-    console.error(`Error deleting discount code ${code_id}:`, error);
-    // ในระบบจริง ควรตรวจสอบ Error Code เพื่อจัดการ Foreign Key constraint
-    return res
-      .status(500)
-      .json({ message: "Server error while deleting discount code." });
-  }
 };
+  
 
 // --- Game Type (สำหรับ User) ---
 
