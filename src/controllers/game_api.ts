@@ -292,7 +292,25 @@ export const updateDiscountCode_api = async (req: Request, res: Response) => {
         return res.status(500).json({ message: "Server error." });
     }
 };
+/**
+ * @desc ดึงข้อมูลคูปองด้วยชื่อโค้ด
+ * @route GET /api/admin/discountsValue/:code_name
+ * */
+export const getDiscountByCodeName_api = async (req: Request, res: Response) => {
+  const code = req.params.code_name;
+  try {
+    const [rows] = await dbcon.query<RowDataPacket[]>(
+      "SELECT discount_value FROM discountcode WHERE code_name = ?", [code]
+    );
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error("Error fetching discount codes:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error while fetching discount codes." });
 
+  }
+};
 /**
  * @desc ลบคูปอง
  * @route DELETE /api/admin/discounts/:code_id
@@ -314,7 +332,7 @@ export const deleteDiscountCode_api = async (req: Request, res: Response) => {
         return res.status(500).json({ message: "Server error while deleting discount code." });
     }
 };
-
+  
 
 // --- Game Type (สำหรับ User) ---
 
