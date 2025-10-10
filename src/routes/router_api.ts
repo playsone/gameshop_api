@@ -107,7 +107,7 @@ router.get("/users/:user_id/library", getUserGameLibrary_api);
 // (GET) ดูรายการเกมในตะกร้า
 router.get("/users/:user_id/basket", getBasket_api);
 // (POST) เพิ่มเกมลงในตะกร้า
-router.post("/users/:user_id/basket/:game_id", addToBasket_api);
+router.post("/users/basket", addToBasket_api);
 // (DELETE) ลบเกมออกจากตะกร้า
 router.delete("/users/:user_id/basket/:bid", removeFromBasket_api);
 

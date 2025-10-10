@@ -460,12 +460,11 @@ export const getBasket_api = async (req: Request, res: Response) => {
 };
 
 /**
- * @route POST /api/users/:user_id/basket/:game_id
+ * @route POST /api/users/basket
  * @desc เพิ่มเกมเข้าตะกร้า
  */
 export const addToBasket_api = async (req: Request, res: Response) => {
-  const uid = req.params.user_id;
-  const game_id = req.params.game_id;
+  const {uid, game_id} = req.body;
 
   try {
     // 1. ตรวจสอบว่าเกมอยู่ในคลังแล้วหรือไม่
