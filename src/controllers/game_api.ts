@@ -252,7 +252,7 @@ export const getDiscountCodeById_api = async (req: Request, res: Response) => {
 
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
-            "SELECT code_id, code_name, discount_value, max_user FROM discountcode WHERE code_id = ?",
+            "SELECT code_id, code_name, discount_value, remaining_user, max_user FROM discountcode WHERE code_id = ?",
             [id]
         );
         if (rows.length === 0) {
@@ -298,8 +298,27 @@ export const updateDiscountCode_api = async (req: Request, res: Response) => {
 export const getDiscountByCodeName_api = async (req: Request, res: Response) => {
   const code = req.params.code_name;
   try {
+    
     const [rows] = await dbcon.query<RowDataPacket[]>(
-      "SELECT discount_value FROM discountcode WHERE code_name = ?", [code]
+      "SELECT code_id, discount_value FROM discountcode WHERE code_name = ?", [code]
+    );
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error("Error fetching discount codes:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error while fetching discount codes." });
+  }
+};
+
+
+export const getUsedCode_api = async (req: Request, res: Response) => {
+  const code = req.params.code_id;
+  const uid = req.params.uid;
+  try {
+    
+    const [rows] = await dbcon.query<RowDataPacket[]>(
+      "SELECT count(code_id) as count FROM gametransaction WHERE code_id = ? AND user_id = ?;", [code, uid]
     );
     return res.status(200).json(rows);
   } catch (error) {

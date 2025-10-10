@@ -17,7 +17,8 @@ import {
     getAllDiscountCodes_api, createDiscountCode_api, deleteDiscountCode_api,
     getAllGameTypes_api, getAllGames_api, applyDiscount_api ,
     getActivePromotions_api,getDiscountCodeById_api,updateDiscountCode_api,
-    getDiscountByCodeName_api
+    getDiscountByCodeName_api,
+    getUsedCode_api
 } from "../controllers/game_api";
 
 import {
@@ -144,6 +145,7 @@ router.get("/promotions", getActivePromotions_api);
 router.get("/admin/discounts", getAllDiscountCodes_api);
 router.post("/admin/discounts", createDiscountCode_api);
 router.get("/admin/discountsValue/:code_name", getDiscountByCodeName_api);
+router.get("/admin/discounts/:code_id/user/:uid", getUsedCode_api);
 // (POST) สร้างโค้ดส่วนลดใหม่
 // (GET) ดูรายละเอียดโค้ดส่วนลดตาม ID
 router.get("/admin/discounts/:code_id", getDiscountCodeById_api);
