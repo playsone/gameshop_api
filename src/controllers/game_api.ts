@@ -247,7 +247,10 @@ export const getAllDiscountCodes_api = async (req: Request, res: Response) => {
  * @desc Admin: Get a single discount code by ID
  */
 export const getDiscountCodeById_api = async (req: Request, res: Response) => {
+  console.log("เข้ามาใน getDiscountCodeById_api แล้ว");
     const id = req.params.id;
+        console.log("ID ที่ดึงมา:", id); 
+
     try {
         const [rows] = await dbcon.query<RowDataPacket[]>(
             "SELECT code_id, code_name, discount_value, max_user FROM discountcode WHERE code_id = ?",
