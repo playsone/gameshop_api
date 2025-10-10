@@ -242,6 +242,59 @@ export const getAllDiscountCodes_api = async (req: Request, res: Response) => {
       .json({ message: "Server error while fetching discount codes." });
   }
 };
+/**
+ * @route GET /api/admin/discounts/:id
+ * @desc Admin: Get a single discount code by ID
+ */
+export const getDiscountCodeById_api = async (req: Request, res: Response) => {
+  console.log("เข้ามาใน getDiscountCodeById_api แล้ว");
+    const id = req.params.id;
+        console.log("ID ที่ดึงมา:", id); 
+
+    try {
+        const [rows] = await dbcon.query<RowDataPacket[]>(
+            "SELECT code_id, code_name, discount_value, max_user FROM discountcode WHERE code_id = ?",
+            [id]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "Discount code not found." });
+        }
+        return res.status(200).json(rows[0]);
+    } catch (error) {
+        console.error(`Error fetching discount code ${id}:`, error);
+        return res.status(500).json({ message: "Server error while fetching discount code." });
+    }
+};
+
+/**
+ * @route PUT /api/admin/discounts/:id
+ * @desc Admin: Update a discount code
+ */
+export const updateDiscountCode_api = async (req: Request, res: Response) => {
+    const id = req.params.id;
+    const { code_name, discount_value, max_user } = req.body;
+
+    if (!code_name || discount_value === undefined || max_user === undefined) {
+        return res.status(400).json({ message: "Missing required fields." });
+    }
+    if (Number(discount_value) <= 0 || Number(max_user) < 1) {
+        return res.status(400).json({ message: "Invalid discount value or max user." });
+    }
+
+    try {
+        const [results] = await dbcon.query<OkPacket>(
+            "UPDATE discountcode SET code_name = ?, discount_value = ?, max_user = ? WHERE code_id = ?",
+            [code_name, discount_value, max_user, id]
+        );
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ message: "Discount code not found or no changes made." });
+        }
+        return res.status(200).json({ message: "Discount code updated successfully." });
+    } catch (error) {
+        console.error(`Error updating discount code ${id}:`, error);
+        return res.status(500).json({ message: "Server error while updating discount code." });
+    }
+};
 
 export const getDiscountByCodeName_api = async (req: Request, res: Response) => {
   const code = req.params.code_name;
