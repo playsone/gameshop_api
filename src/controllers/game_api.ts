@@ -443,11 +443,11 @@ export const getBasket_api = async (req: Request, res: Response) => {
   try {
     // ดึงรายการในตะกร้าและ join กับข้อมูลเกม
     const [rows] = await dbcon.query<RowDataPacket[]>(
-      `SELECT b.bid, b.uid, b.game_id, b.added_at, g.name AS game_name, g.price, g.image
-             FROM basket b
-             JOIN game g ON b.game_id = g.game_id
-             WHERE b.uid = ?
-             ORDER BY b.added_at DESC`,
+      `SELECT 	bk.bid, ga.game_id, ga.name, ga.price, ga.image
+      FROM	basket as bk, game as ga, users as us
+      WHERE 	bk.game_id 	= ga.game_id
+      AND		bk.uid		= us.user_id
+      AND		bk.uid = ?`,
       [uid]
     );
     return res.status(200).json(rows);
@@ -470,7 +470,7 @@ export const addToBasket_api = async (req: Request, res: Response) => {
   try {
     // 1. ตรวจสอบว่าเกมอยู่ในคลังแล้วหรือไม่
     const [libraryCheck] = await dbcon.query<RowDataPacket[]>(
-      "SELECT purchase_id FROM gamelibrary WHERE user_id = ? AND game_id = ?",
+      "SELECT count(*) as count FROM usersgamelibrary WHERE user_id = ? AND game_id = ?;",
       [uid, game_id]
     );
     if (libraryCheck.length > 0) {
@@ -492,7 +492,7 @@ export const addToBasket_api = async (req: Request, res: Response) => {
 
     // 3. เพิ่มเกมเข้าตะกร้า
     const [results] = await dbcon.query<OkPacket>(
-      "INSERT INTO basket(uid, game_id, added_at) VALUES (?, ?, NOW())",
+      "INSERT INTO basket(uid, game_id)VALUES(?, ?)",
       [uid, game_id]
     );
 
