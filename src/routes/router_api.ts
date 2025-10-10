@@ -142,9 +142,9 @@ router.get("/promotions", getActivePromotions_api);
 
 // (GET) ดูโค้ดส่วนลดทั้งหมด
 router.get("/admin/discounts", getAllDiscountCodes_api);
-router.get("/admin/discounts/:code_name", getDiscountByCodeName_api);
-// (POST) สร้างโค้ดส่วนลดใหม่
 router.post("/admin/discounts", createDiscountCode_api);
+router.get("/admin/discountsValue/:code_name", getDiscountByCodeName_api);
+// (POST) สร้างโค้ดส่วนลดใหม่
 // (GET) ดูรายละเอียดโค้ดส่วนลดตาม ID
 router.get("/admin/discounts/:code_id", getDiscountCodeById_api);
 // (PUT) อัปเดตโค้ดส่วนลด
