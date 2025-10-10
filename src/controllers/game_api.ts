@@ -243,6 +243,21 @@ export const getAllDiscountCodes_api = async (req: Request, res: Response) => {
   }
 };
 
+export const getDiscountByCodeName_api = async (req: Request, res: Response) => {
+  const code = req.params.code_name;
+  try {
+    const [rows] = await dbcon.query<RowDataPacket[]>(
+      "SELECT discount_value FROM discountcode WHERE code_name = ?", [code]
+    );
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error("Error fetching discount codes:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error while fetching discount codes." });
+  }
+};
+
 /**
  * @route DELETE /api/admin/discounts/:code_id
  * @desc Admin จัดการส่วนลด - ลบโค้ดส่วนลด

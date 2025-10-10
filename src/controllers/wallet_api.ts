@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { dbcon } from "../database/pool";
 import { getGameById_fn } from "./utilityFunctions";
 import { OkPacket, RowDataPacket } from 'mysql2';
+import { PostUserBuyRequest } from "../models/req/post_users_buy_req";
 
 // --- Wallet Balance ---
 
@@ -232,111 +233,15 @@ export const getAdminTransactionHistory_api = async (req: Request, res: Response
 
 
 // --- ซื้อเกมหลายเกมจากตะกร้า ---
-export const purchaseGame_api2 = async (req: Request, res: Response) => {
-    const user_id = Number(req.params.user_id);
-    const { code_name } = req.body; 
+export const purchaseGame_api2 = async (req: Request<{}, {}, PostUserBuyRequest>, res: Response) => {
+    const { uid, games, code_id, total,  } = req.body; 
+    
+        for(let game of games){
 
-    try {
-        await dbcon.query("START TRANSACTION");
-
-        const [basketItems] = await dbcon.query<RowDataPacket[]>(
-            `SELECT b.bid, g.game_id, g.name, g.price
-            FROM basket b JOIN game g ON b.game_id = g.game_id
-            WHERE b.uid = ?`,
-            [user_id]
-        );
-        if (basketItems.length === 0) { await dbcon.query("ROLLBACK"); return res.status(404).json({ message: "Basket is empty." }); }
-
-        let subtotal = basketItems.reduce((sum, item) => sum + item.price, 0);
-        let finalPrice = subtotal;
-        let discountId: number | null = null;
-        let discountAmount = 0;
-
-        for (const item of basketItems) {
-            const [libraryCheck] = await dbcon.query<RowDataPacket[]>(
-                "SELECT * FROM usersgamelibrary WHERE user_id = ? AND game_id = ?",
-                [user_id, item.game_id]
-            );
-            if (libraryCheck.length > 0) { 
-                await dbcon.query("ROLLBACK"); 
-                return res.status(409).json({ message: `Game '${item.name}' already exists in your library. Purchase aborted.` }); 
-            }
         }
+    let data:PostUserBuyRequest[] = []
+    data.push
 
-        if (code_name) {
-            const [codeRows] = await dbcon.query<RowDataPacket[]>(
-                "SELECT code_id, discount_value, remaining_user FROM discountcode WHERE code_name = ?",
-                [code_name]
-            );
-            const discountCode = codeRows[0];
-            
-            if (discountCode && discountCode.remaining_user > 0) {
-                 const [usageCheck] = await dbcon.query<RowDataPacket[]>(
-                    "SELECT gametrans_id FROM gametransaction WHERE user_id = ? AND code_id = ?",
-                    [user_id, discountCode.code_id]
-                );
-                if (usageCheck.length > 0) {
-                    await dbcon.query("ROLLBACK"); 
-                    return res.status(409).json({ message: "Discount code already used by this account." });
-                }
-
-                discountId = discountCode.code_id;
-                discountAmount = discountCode.discount_value;
-                finalPrice = Math.max(0, subtotal - discountAmount);
-            } else {
-                await dbcon.query("ROLLBACK"); 
-                return res.status(400).json({ message: "Invalid or expired discount code." });
-            }
-        }
-        
-        const [userRows] = await dbcon.query<RowDataPacket[]>(
-            "SELECT wallet FROM users WHERE user_id = ? FOR UPDATE",
-            [user_id]
-        );
-        const userWallet = userRows[0]?.wallet;
-
-        if (userWallet === undefined) { await dbcon.query("ROLLBACK"); return res.status(404).json({ message: "User not found." }); }
-        if (userWallet < finalPrice) { await dbcon.query("ROLLBACK"); return res.status(402).json({ message: "Insufficient funds in wallet." }); }
-
-        await dbcon.query<OkPacket>("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", [finalPrice, user_id]);
-        
-        // ADDED: บันทึกรายการเงินออกทั้งหมด (status = 1)
-        await dbcon.query<OkPacket>(
-            "INSERT INTO wallettransaction(user_id, amount, status) VALUES (?, ?, 1)",
-            [user_id, finalPrice]
-        );
-        
-        for (const item of basketItems) {
-            const gamePriceAfterDiscount = (item.price / subtotal) * finalPrice;
-            
-            await dbcon.query<OkPacket>(
-                "INSERT INTO gametransaction(user_id, game_id, code_id, price) VALUES (?, ?, ?, ?)",
-                [user_id, item.game_id, discountId, gamePriceAfterDiscount]
-            );
-            await dbcon.query<OkPacket>("INSERT INTO usersgamelibrary(user_id, game_id) VALUES (?, ?)", [user_id, item.game_id]);
-        }
-        
-        if (discountId !== null) {
-            await dbcon.query<OkPacket>("UPDATE discountcode SET remaining_user = remaining_user - 1 WHERE code_id = ?", [discountId]);
-        }
-        
-        await dbcon.query<OkPacket>("DELETE FROM basket WHERE uid = ?", [user_id]);
-
-        await dbcon.query("COMMIT");
-
-        res.status(200).json({ 
-            message: "Purchase successful. Games added to your library.", 
-            subtotal: subtotal,
-            discount_applied: discountAmount,
-            final_price: finalPrice, 
-            items_purchased: basketItems.length
-        });
-
-    } catch (err: any) {
-        await dbcon.query("ROLLBACK"); 
-        console.error(err);
-        res.status(500).json({ message: "Purchase failed due to server error.", error: err.message });
-    }
 };
 
 // --- NEW FUNCTION ---

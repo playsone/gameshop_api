@@ -16,7 +16,8 @@ import {
     addToBasket_api, getBasket_api, removeFromBasket_api, getUserGameLibrary_api,
     getAllDiscountCodes_api, createDiscountCode_api, deleteDiscountCode_api,
     getAllGameTypes_api, getAllGames_api, applyDiscount_api ,
-    getActivePromotions_api
+    getActivePromotions_api,
+    getDiscountByCodeName_api
 } from "../controllers/game_api";
 
 import {
@@ -31,7 +32,7 @@ import {
 const router = express.Router();
 // เส้นทางหลักของ API
 router.get('/', (_req, res) => {
-    res.send('Welcome to the Game Shop API');
+    res.send('Welcome to the Game ng Shop API');
 });
 
 // =======================================================
@@ -141,6 +142,7 @@ router.get("/promotions", getActivePromotions_api);
 
 // (GET) ดูโค้ดส่วนลดทั้งหมด
 router.get("/admin/discounts", getAllDiscountCodes_api);
+router.get("/admin/discounts/:code_name", getDiscountByCodeName_api);
 // (POST) สร้างโค้ดส่วนลดใหม่
 router.post("/admin/discounts", createDiscountCode_api);
 // (DELETE) ลบโค้ดส่วนลด
