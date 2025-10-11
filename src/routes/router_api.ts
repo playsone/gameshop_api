@@ -13,12 +13,15 @@ import {
 import {
     createGame_api, updateGame_api, deleteGame_api, createGameType_api,
     getLatestGames_api, searchGames_api, getGameDetails_api, getTopSellerGames_api,
-    addToBasket_api, getBasket_api, removeFromBasket_api, getUserGameLibrary_api,
+    addToBasket_api, removeFromBasket_api, getUserGameLibrary_api,
     getAllDiscountCodes_api, createDiscountCode_api, deleteDiscountCode_api,
     getAllGameTypes_api, getAllGames_api, applyDiscount_api ,
     getActivePromotions_api,getDiscountCodeById_api,updateDiscountCode_api,
     getDiscountByCodeName_api,
-    getUsedCode_api
+    getUsedCode_api,
+    isAddToBasket_api,
+    getBasket_api,
+    getUserGameTranscription_api
 } from "../controllers/game_api";
 
 import {
@@ -105,13 +108,15 @@ router.get("/games/:game_id", getGameDetails_api);
 
 // --- คลังเกมและตะกร้าของผู้ใช้ (USER LIBRARY & BASKET) ---
 // (GET) ดูคลังเกมของตัวเอง
-router.get("/users/:user_id/library", getUserGameLibrary_api);
+router.get("/users/:user_id/library", getUserGameTranscription_api);
+router.get("/users/:user_id/lib", getUserGameLibrary_api);
 // (GET) ดูรายการเกมในตะกร้า
 router.get("/users/:user_id/basket", getBasket_api);
+router.get("/users/:uid/basket/:gid", isAddToBasket_api);
 // (POST) เพิ่มเกมลงในตะกร้า
 router.post("/users/basket", addToBasket_api);
 // (DELETE) ลบเกมออกจากตะกร้า
-router.delete("/users/:user_id/basket/:bid", removeFromBasket_api);
+router.delete("/users/:user_id/basket/:game_id", removeFromBasket_api);
 
 
 // =======================================================

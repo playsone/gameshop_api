@@ -5,5 +5,4 @@ export interface PostUserBuyRequest {
   games: [Gamelist];
   code_id: number;
   discount: number;
-  total: number;
 }

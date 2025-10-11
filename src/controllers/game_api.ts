@@ -247,21 +247,21 @@ export const getAllDiscountCodes_api = async (req: Request, res: Response) => {
  * @route GET /api/admin/discounts/:code_id
  */
 export const getDiscountCodeById_api = async (req: Request, res: Response) => {
-    // ✅ แก้ไข: เปลี่ยนจาก 'id' เป็น 'code_id' ให้ตรงกับ router.ts
-    const id = req.params.code_id;
-    try {
-        const [rows] = await dbcon.query<RowDataPacket[]>(
-            "SELECT code_id, code_name, discount_value, remaining_user, max_user FROM discountcode WHERE code_id = ?",
-            [id]
-        );
-        if (rows.length === 0) {
-            return res.status(404).json({ message: "Discount code not found." });
-        }
-        return res.status(200).json(rows[0]);
-    } catch (error) {
-        console.error(`Error fetching discount code ${id}:`, error);
-        return res.status(500).json({ message: "Server error." });
+  // ✅ แก้ไข: เปลี่ยนจาก 'id' เป็น 'code_id' ให้ตรงกับ router.ts
+  const id = req.params.code_id;
+  try {
+    const [rows] = await dbcon.query<RowDataPacket[]>(
+      "SELECT code_id, code_name, discount_value, remaining_user, max_user FROM discountcode WHERE code_id = ?",
+      [id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Discount code not found." });
     }
+    return res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error(`Error fetching discount code ${id}:`, error);
+    return res.status(500).json({ message: "Server error." });
+  }
 };
 
 /**
@@ -269,39 +269,46 @@ export const getDiscountCodeById_api = async (req: Request, res: Response) => {
  * @route PUT /api/admin/discounts/:code_id
  */
 export const updateDiscountCode_api = async (req: Request, res: Response) => {
-    // ✅ แก้ไข: เปลี่ยนจาก 'id' เป็น 'code_id' ให้ตรงกับ router.ts
-    const id = req.params.code_id;
-    const { code_name, discount_value, max_user } = req.body;
+  // ✅ แก้ไข: เปลี่ยนจาก 'id' เป็น 'code_id' ให้ตรงกับ router.ts
+  const id = req.params.code_id;
+  const { code_name, discount_value, max_user } = req.body;
 
-    if (!code_name || discount_value <= 0 || max_user < 1) {
-        return res.status(400).json({ message: "Invalid data provided." });
+  if (!code_name || discount_value <= 0 || max_user < 1) {
+    return res.status(400).json({ message: "Invalid data provided." });
+  }
+
+  try {
+    const [results] = await dbcon.query<OkPacket>(
+      "UPDATE discountcode SET code_name = ?, discount_value = ?, max_user = ? WHERE code_id = ?",
+      [code_name, discount_value, max_user, id]
+    );
+
+    if (results.affectedRows === 0) {
+      return res
+        .status(404)
+        .json({ message: "Discount code not found or no changes made." });
     }
-
-    try {
-        const [results] = await dbcon.query<OkPacket>(
-            "UPDATE discountcode SET code_name = ?, discount_value = ?, max_user = ? WHERE code_id = ?",
-            [code_name, discount_value, max_user, id]
-        );
-
-        if (results.affectedRows === 0) {
-            return res.status(404).json({ message: "Discount code not found or no changes made." });
-        }
-        return res.status(200).json({ message: "Discount code updated successfully." });
-    } catch (error) {
-        console.error(`Error updating discount code ${id}:`, error);
-        return res.status(500).json({ message: "Server error." });
-    }
+    return res
+      .status(200)
+      .json({ message: "Discount code updated successfully." });
+  } catch (error) {
+    console.error(`Error updating discount code ${id}:`, error);
+    return res.status(500).json({ message: "Server error." });
+  }
 };
 /**
  * @desc ดึงข้อมูลคูปองด้วยชื่อโค้ด
  * @route GET /api/admin/discountsValue/:code_name
  * */
-export const getDiscountByCodeName_api = async (req: Request, res: Response) => {
+export const getDiscountByCodeName_api = async (
+  req: Request,
+  res: Response
+) => {
   const code = req.params.code_name;
   try {
-    
     const [rows] = await dbcon.query<RowDataPacket[]>(
-      "SELECT code_id, discount_value FROM discountcode WHERE code_name = ?", [code]
+      "SELECT code_id, discount_value FROM discountcode WHERE code_name = ?",
+      [code]
     );
     return res.status(200).json(rows);
   } catch (error) {
@@ -312,14 +319,13 @@ export const getDiscountByCodeName_api = async (req: Request, res: Response) => 
   }
 };
 
-
 export const getUsedCode_api = async (req: Request, res: Response) => {
   const code = req.params.code_id;
   const uid = req.params.uid;
   try {
-    
     const [rows] = await dbcon.query<RowDataPacket[]>(
-      "SELECT count(code_id) as count FROM gametransaction WHERE code_id = ? AND user_id = ?;", [code, uid]
+      "SELECT count(code_id) as count FROM gametransaction WHERE code_id = ? AND user_id = ?;",
+      [code, uid]
     );
     return res.status(200).json(rows);
   } catch (error) {
@@ -327,7 +333,6 @@ export const getUsedCode_api = async (req: Request, res: Response) => {
     return res
       .status(500)
       .json({ message: "Server error while fetching discount codes." });
-
   }
 };
 /**
@@ -335,23 +340,26 @@ export const getUsedCode_api = async (req: Request, res: Response) => {
  * @route DELETE /api/admin/discounts/:code_id
  */
 export const deleteDiscountCode_api = async (req: Request, res: Response) => {
-    // ✅ แก้ไข: เปลี่ยนจาก 'id' เป็น 'code_id' ให้ตรงกับ router.ts
-    const id = req.params.code_id;
-    try {
-        const [results] = await dbcon.query<OkPacket>(
-            "DELETE FROM discountcode WHERE code_id = ?",
-            [id]
-        );
-        if (results.affectedRows === 0) {
-            return res.status(404).json({ message: "Discount code not found." });
-        }
-        return res.status(200).json({ message: "Discount code deleted successfully." });
-    } catch (error) {
-        console.error(`Error deleting discount code ${id}:`, error);
-        return res.status(500).json({ message: "Server error while deleting discount code." });
+  // ✅ แก้ไข: เปลี่ยนจาก 'id' เป็น 'code_id' ให้ตรงกับ router.ts
+  const id = req.params.code_id;
+  try {
+    const [results] = await dbcon.query<OkPacket>(
+      "DELETE FROM discountcode WHERE code_id = ?",
+      [id]
+    );
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: "Discount code not found." });
     }
+    return res
+      .status(200)
+      .json({ message: "Discount code deleted successfully." });
+  } catch (error) {
+    console.error(`Error deleting discount code ${id}:`, error);
+    return res
+      .status(500)
+      .json({ message: "Server error while deleting discount code." });
+  }
 };
-  
 
 // --- Game Type (สำหรับ User) ---
 
@@ -543,20 +551,34 @@ export const getBasket_api = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * @route POST /api/users/basket
- * @desc เพิ่มเกมเข้าตะกร้า
- */
+export const isAddToBasket_api = async (req: Request, res: Response) => {
+  const uid = req.params.uid;
+  const gid = req.params.gid;
+  try {
+    // ดึงรายการในตะกร้าและ join กับข้อมูลเกม
+    const [rows] = await dbcon.query<RowDataPacket[]>(
+      `select count(game_id) as count FROM basket WHERE game_id = ? AND uid = ?`,
+      [gid, uid]
+    );
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error(`Error fetching basket for user ${uid}:`, error);
+    return res
+      .status(500)
+      .json({ message: "Server error while fetching basket." });
+  }
+};
+
 export const addToBasket_api = async (req: Request, res: Response) => {
-  const {uid, game_id} = req.body;
+  const { uid, game_id } = req.body;
 
   try {
     // 1. ตรวจสอบว่าเกมอยู่ในคลังแล้วหรือไม่
     const [libraryCheck] = await dbcon.query<RowDataPacket[]>(
-      "SELECT count(*) as count FROM usersgamelibrary WHERE user_id = ? AND game_id = ?;",
+      "SELECT count(game_id) as count FROM usersgamelibrary WHERE user_id = ? AND game_id = ?",
       [uid, game_id]
     );
-    if (libraryCheck.length > 0) {
+    if (libraryCheck[0].count > 0) {
       return res
         .status(409)
         .json({ message: "Game is already in your library." });
@@ -564,10 +586,10 @@ export const addToBasket_api = async (req: Request, res: Response) => {
 
     // 2. ตรวจสอบว่าเกมอยู่ในตะกร้าแล้วหรือไม่
     const [basketCheck] = await dbcon.query<RowDataPacket[]>(
-      "SELECT bid FROM basket WHERE uid = ? AND game_id = ?",
+      "SELECT count(game_id) as count FROM basket WHERE uid = ? AND game_id = ?",
       [uid, game_id]
     );
-    if (basketCheck.length > 0) {
+    if (basketCheck[0].count > 0) {
       return res
         .status(409)
         .json({ message: "Game is already in your basket." });
@@ -600,12 +622,11 @@ export const addToBasket_api = async (req: Request, res: Response) => {
  */
 export const removeFromBasket_api = async (req: Request, res: Response) => {
   const uid = req.params.user_id;
-  const bid = req.params.bid; // Basket ID
-
+  const gid = req.params.game_id;
   try {
     const [results] = await dbcon.query<OkPacket>(
-      "DELETE FROM basket WHERE bid = ? AND uid = ?",
-      [bid, uid]
+      "DELETE FROM basket WHERE game_id = ? AND uid = ?",
+      [gid, uid]
     );
 
     if (results.affectedRows === 0) {
@@ -618,7 +639,7 @@ export const removeFromBasket_api = async (req: Request, res: Response) => {
       .status(200)
       .json({ message: "Game removed from basket successfully." });
   } catch (error) {
-    console.error(`Error removing basket item ${bid} for user ${uid}:`, error);
+    console.error(`Error removing basket item ${gid} for user ${uid}:`, error);
     return res
       .status(500)
       .json({ message: "Server error while removing from basket." });
@@ -631,7 +652,10 @@ export const removeFromBasket_api = async (req: Request, res: Response) => {
  * @route GET /api/users/:user_id/library
  * @desc ดึงรายการเกมในคลัง (Library) ของ User
  */
-export const getUserGameLibrary_api = async (req: Request, res: Response) => {
+export const getUserGameTranscription_api = async (
+  req: Request,
+  res: Response
+) => {
   const uid = req.params.user_id;
   try {
     const [rows] = await dbcon.query<RowDataPacket[]>(
@@ -641,6 +665,25 @@ export const getUserGameLibrary_api = async (req: Request, res: Response) => {
       AND g.game_id = gt.game_id
       AND dc.code_id = gt.code_id
       AND gt.user_id = ?`,
+      [uid]
+    );
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error(`Error fetching library for user ${uid}:`, error);
+    return res
+      .status(500)
+      .json({ message: "Server error while fetching game library." });
+  }
+};
+
+export const getUserGameLibrary_api = async (req: Request, res: Response) => {
+  const uid = req.params.user_id;
+  try {
+    const [rows] = await dbcon.query<RowDataPacket[]>(
+      `SELECT 	ga.game_id, ga.name, ga.image, ul.purchase_date
+      FROM 	    game as ga, usersgamelibrary as ul
+      WHERE 	  ga.game_id = ul.game_id
+      AND		    ul.user_id = ?`,
       [uid]
     );
     return res.status(200).json(rows);

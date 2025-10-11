@@ -234,7 +234,7 @@ export const getAdminTransactionHistory_api = async (req: Request, res: Response
 
 // --- ซื้อเกมหลายเกมจากตะกร้า ---
 export const purchaseGame_api2 = async (req: Request<{}, {}, PostUserBuyRequest>, res: Response) => {
-    const { uid, games, code_id, total,  } = req.body; 
+    const { uid, games, code_id, discount  } = req.body; 
     
         for(let game of games){
 
